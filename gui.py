@@ -33,13 +33,9 @@ class App(ctk.CTk):
         
         self.title("U-ProBE")
         self.geometry("1024x600")
-        self.grid_rowconfigure(0, weight=0)  
-        self.grid_rowconfigure(1, weight=1)  
-        self.grid_rowconfigure(2, weight=0)  
-        self.grid_rowconfigure(3, weight=0)  
-        self.grid_rowconfigure(4, weight=1)  
-        self.grid_columnconfigure(0, weight=1)  
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure((0,2,3), weight=0)  
+        self.grid_rowconfigure((1,4), weight=1)  
+        self.grid_columnconfigure((0,1), weight=1)  
         
         self.iconbitmap("icon.ico")  # Imposta l'icona dell'applicazione
         
