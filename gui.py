@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import os
 
 # Imposta il tema dell'applicazione
 ctk.set_appearance_mode("system")
@@ -37,8 +38,9 @@ class App(ctk.CTk):
         self.grid_rowconfigure((1,4), weight=1)  
         self.grid_columnconfigure((0,1), weight=1)  
         
-        self.iconbitmap("icon.ico")  # Imposta l'icona dell'applicazione
-        
+        icon_path = os.path.join(os.path.dirname(__file__), "icon.ico")
+        self.iconbitmap(icon_path)  # Imposta l'icona dell'applicazione
+                
         self.headerbutton = ctk.CTkButton(self, text="Home", command=self.show_home)
         self.headerbutton.grid(row=0, column=0,columnspan=2, padx=10, pady=10, sticky="nsew")
 
@@ -66,7 +68,7 @@ class App(ctk.CTk):
         self.result_textbox = ctk.CTkTextbox(self, height=15, width=80)
         self.result_textbox.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
         
-        self.grid_rowconfigure(4, weight=3)  # Imposta il peso della riga per espandersi
+        self.grid_rowconfigure(4, weight=1)  # Imposta il peso della riga per espandersi
 
     # Callback per il pulsante del primo insieme
     def button_callback_column1(self):
