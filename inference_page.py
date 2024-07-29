@@ -30,6 +30,7 @@ class InferencePage:
         self.import_data_section.frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
         self.post_hoc_methods_section.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
         self.inference_export_section.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
-
+        
     def show_inference_page(self):
-        self.import_model_section.frame.tkraise()
+        pass
+

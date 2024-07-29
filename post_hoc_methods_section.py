@@ -1,23 +1,32 @@
 import customtkinter as ctk
 
 class PostHocMethodsSection:
-
     def __init__(self, master):
-        self.frame = ctk.CTkFrame(master)
+        self.master = master  # Salva il master come attributo dell'istanza
+        
+        # Crea un frame per contenere i widget
+        self.frame = ctk.CTkFrame(self.master)
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
         
-        self.label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods")
-        self.label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        # Etichetta di intestazione con uno stile elegante
+        self.label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=("Arial", 18, "bold"))
+        self.label.grid(row=0, column=0, padx=15, pady=(15, 10), sticky="nsew")
 
     def create_widgets(self):
-        self.trustscore_checkbox = ctk.CTkCheckBox(self.frame, text="Trustscore")
-        self.trustscore_checkbox.grid(row=1, column=0, pady=5, padx=10)
-        self.mc_dropout_checkbox = ctk.CTkCheckBox(self.frame, text="MC-Dropout")
-        self.mc_dropout_checkbox.grid(row=2, column=0, pady=5, padx=10)
-        self.topological_data_checkbox = ctk.CTkCheckBox(self.frame, text="Topological data analysis")
-        self.topological_data_checkbox.grid(row=3, column=0, pady=5, padx=10)
-        self.ensemble_checkbox = ctk.CTkCheckBox(self.frame, text="Ensemble")
-        self.ensemble_checkbox.grid(row=4, column=0, pady=5, padx=10)
-        self.few_shot_learning_checkbox = ctk.CTkCheckBox(self.frame, text="Few shot learning")
-        self.few_shot_learning_checkbox.grid(row=5, column=0, pady=5, padx=10)
+        # Lista di opzioni con checkbox
+        options = [
+            "Trustscore",
+            "MC-Dropout",
+            "Topological data analysis",
+            "Ensemble",
+            "Few shot learning"
+        ]
+        
+        # Crea checkbox e aggiungili al frame
+        for idx, option in enumerate(options):
+            checkbox = ctk.CTkCheckBox(self.frame, text=option, font=("Arial", 14))
+            checkbox.grid(row=idx + 1, column=0, pady=8, padx=15, sticky="w")
+
+    def show(self):
+        self.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
