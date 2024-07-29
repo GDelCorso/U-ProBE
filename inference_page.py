@@ -1,36 +1,30 @@
 import customtkinter as ctk
-from import_model_section import ImportModelSection
-from import_data_section import ImportDataSection
-from post_hoc_methods_section import PostHocMethodsSection
-from inference_export_section import InferenceExportSection
+from widget.import_section import ImportSection
+from widget.graph_visualizer import GraphVisualizer
+from widget.results_table import ResultsTable
+from widget.inference_section import InferenceSection
 
 class InferencePage:
     def __init__(self, master):
         self.master = master
-
-        self.master.grid_rowconfigure(0, weight=1)
-        self.master.grid_rowconfigure(1, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)
-        self.master.grid_columnconfigure(1, weight=1)
+        
+        # Creazione del frame principale per la pagina di inferenza
+        self.frame = ctk.CTkFrame(self.master)
+        self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        
+        # Configurazione della griglia all'interno del frame
+        for i in range(2):
+            self.frame.grid_rowconfigure(i, weight=1)
+            self.frame.grid_columnconfigure(i, weight=1)
 
         # Creazione delle sezioni
-        self.import_model_section = ImportModelSection(self.master)
-        self.import_data_section = ImportDataSection(self.master)
-        self.post_hoc_methods_section = PostHocMethodsSection(self.master)
-        self.inference_export_section = InferenceExportSection(self.master)
-
-        # Creazione dei widget per ogni sezione
-        self.import_model_section.create_widgets()
-        self.import_data_section.create_widgets()
-        self.post_hoc_methods_section.create_widgets()
-        self.inference_export_section.create_widgets()
+        self.import_section = ImportSection(self.frame)
+        self.graph_visualizer = GraphVisualizer(self.frame)
+        self.post_hoc_methods_section = InferenceSection(self.frame, self.import_section)
+        self.results_table = ResultsTable(self.frame)
 
         # Posizionamento delle sezioni nella griglia
-        self.import_model_section.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-        self.import_data_section.frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        self.import_section.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.graph_visualizer.frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
         self.post_hoc_methods_section.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-        self.inference_export_section.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
-        
-    def show_inference_page(self):
-        pass
-
+        self.results_table.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
