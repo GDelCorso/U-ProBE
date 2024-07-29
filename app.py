@@ -1,9 +1,7 @@
 import os
 import customtkinter as ctk
-import tkinterdnd2 as tkdnd
-from ui_elements import ScrollableCheckBoxFrame
 from home_page import HomePage
-from page2 import Page2
+from inference_page import InferencePage
 
 # Imposta il tema dell'applicazione
 ctk.set_appearance_mode("system")
@@ -26,18 +24,18 @@ class App(ctk.CTk):
         self.tabview.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         self.home_tab = self.tabview.add("Home")
-        self.page2_tab = self.tabview.add("Blank")
+        self.inference_page_tab = self.tabview.add("Inference Page")
 
         self.home_page = HomePage(self.home_tab)
-        self.page2 = Page2(self.page2_tab)
+        self.inference_page = InferencePage(self.inference_page_tab)
 
         self.show_home()
 
     def show_home(self):
         self.home_page.show_home()
 
-    def show_page2(self):
-        self.page2.show_page2()
+    def show_inferencepage(self):
+        self.inference_page.show_inference_page()
 
 # Crea e avvia l'applicazione
 app = App()
