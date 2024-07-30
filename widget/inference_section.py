@@ -9,11 +9,11 @@ class InferenceSection:
         
         # Creazione del frame principale
         self.frame = ctk.CTkFrame(master)
-        self.frame.grid_rowconfigure((0, 1, 2), weight=1, uniform="row")
+        self.frame.grid_rowconfigure((0, 1, 2), weight=1)
         self.frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
 
         # Etichetta di intestazione per i metodi post-hoc
-        self.post_hoc_label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=("Arial", 18, "bold"))
+        self.post_hoc_label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=("Arial", 20, "bold"))
         self.post_hoc_label.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="nsew")
 
         # Lista di opzioni con checkbox per i metodi post-hoc
@@ -21,6 +21,10 @@ class InferenceSection:
 
         # Creazione dei widget per l'esportazione
         self.create_export_widgets()
+
+        # Etichetta per messaggi di stato e errori, inizialmente vuota
+        self.status_label = ctk.CTkLabel(self.frame, text="", font=("Arial", 12), text_color="red")
+        self.status_label.grid(row=3, column=0, columnspan=2, padx=5, pady=2, sticky="nsew")
 
         # Inizializzazione dei risultati dell'inferenza
         self.inference_results = []
@@ -58,27 +62,33 @@ class InferenceSection:
         self.export_button.grid(row=2, column=1, pady=5, padx=10, sticky="ew")
 
     def run_inference(self):
+        # Cancella il messaggio di errore precedente
+        self.status_label.configure(text="", text_color="red")
+        
         # Recupera i file importati
         model_file = self.import_section.get_model_file()
         dataloader_file = self.import_section.get_dataloader_file()
         dataset_file = self.import_section.get_dataset_file()
         
         if not model_file or not dataloader_file or not dataset_file:
-            print("Please ensure all required files are imported before running inference.")
+            self.status_label.configure(text="Please ensure all required files are imported before running inference.")
             return
-        
+
+        # Messaggio di inferenza in corso
+        self.status_label.configure(text="Inference in progress...", text_color="white")
+
         # Simula un processo di inferenza
         self.inference_results = ["Result 1", "Result 2", "Result 3"]
-        print("Running inference...")
-        print(f"Using model file: {model_file}")
-        print(f"Using dataloader file: {dataloader_file}")
-        print(f"Using dataset file: {dataset_file}")
-        # Mostra i risultati dell'inferenza
-        print("Inference results:", self.inference_results)
+
+        # Messaggio di inferenza terminata
+        self.status_label.configure(text="Inference completed.", text_color="white")
 
     def export_results(self):
+        # Cancella il messaggio di errore precedente
+        self.status_label.configure(text="", text_color="red")
+
         if not self.inference_results:
-            print("No inference results to export.")
+            self.status_label.configure(text="No inference results to export.")
             return
         
         # Chiede all'utente di selezionare un percorso per il file .csv
@@ -97,3 +107,6 @@ class InferenceSection:
                 for result in self.inference_results:
                     writer.writerow([result])
             print(f"Results exported to {file_path}")
+            
+            # Messaggio di esportazione completata
+            self.status_label.configure(text=f"CSV file exported to {file_path}", text_color="white")
