@@ -1,6 +1,6 @@
 import os   
 import customtkinter as ctk
-from inference_page import InferencePage
+from pages.inference_page import InferencePage
 
 # Imposta il tema dell'applicazione
 ctk.set_appearance_mode("system")
