@@ -11,7 +11,7 @@ class ImportSection:
         self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         
         # Configurazione della griglia del frame principale
-        self.frame.grid_rowconfigure((0, 1), weight=1, uniform="row")
+        self.frame.grid_rowconfigure((0, 1), weight=1)
         self.frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="column")
         
         # Titolo della sezione
