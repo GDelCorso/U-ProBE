@@ -9,7 +9,7 @@
 - **User Interface:** Built with CustomTkinter for an intuitive and interactive user experience.
 - **Inference Methods:** Supports various post-hoc methods to assess model reliability:
   - Trustscore
-  - Monte Carlo Dropout
+  - MC Dropout
   - Topological Data Analysis
   - Deep Ensembling
   - Few-Shot Learning
@@ -91,8 +91,8 @@ To contribute to the project, please follow these guidelines:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
 ## Code of Conduct
 
-Please read the [CODE_OF_CONDUCT](CODE_OF_CONDUCT) before contributing to this project.
+Please read the [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md) before contributing to this project.
