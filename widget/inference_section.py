@@ -78,7 +78,7 @@ class InferenceSection:
         
         # Verifica se almeno una checkbox è selezionata
         if not any(self.options_state.values()):
-            self.status_label.configure(text="Please select at least one post-hoc method before running inference.", fg=st.ERROR_COLOR)
+            self.status_label.configure(text="Please select at least one post-hoc method before running inference.", text_color=st.ERROR_COLOR)
             return
         
         # Recupera i file importati
@@ -87,25 +87,25 @@ class InferenceSection:
         dataset_file = self.import_section.get_dataset_file()
         
         if not model_file or not dataloader_file or not dataset_file:
-            self.status_label.configure(text="Please ensure all required files are imported before running inference.", fg=st.ERROR_COLOR)
+            self.status_label.configure(text="Please ensure all required files are imported before running inference.", text_color=st.ERROR_COLOR)
             return
 
         # Messaggio di inferenza in corso
-        self.status_label.configure(text="Inference in progress...", fg="white")
+        self.status_label.configure(text="Inference in progress...", text_color=st.COMUNICATION_COLOR)
 
         # Simula un processo di inferenza, usa lo stato delle checkbox
         selected_options = [opt for opt, state in self.options_state.items() if state]
         self.inference_results = [f"Result for {opt}" for opt in selected_options]
 
         # Messaggio di inferenza terminata
-        self.status_label.configure(text="Inference completed.", fg="white")
+        self.status_label.configure(text="Inference completed.", text_color=st.COMUNICATION_COLOR)
 
     def export_results(self):
         # Cancella il messaggio di errore precedente
         self.status_label.configure(text="", font=st.STATUS_FONT)
 
         if not self.inference_results:
-            self.status_label.configure(text="No inference results to export.", fg=st.ERROR_COLOR)
+            self.status_label.configure(text="No inference results to export.", text_color=st.ERROR_COLOR)
             return
         
         # Chiede all'utente di selezionare un percorso per il file .csv
@@ -129,4 +129,4 @@ class InferenceSection:
                     writer.writerow([result])
             
             # Messaggio di esportazione completata
-            self.status_label.configure(text=f"CSV file exported to {os.path.basename(file_path)}", fg=st.COMUNICATION_COLOR)
+            self.status_label.configure(text=f"CSV file exported to {os.path.basename(file_path)}", text_color=st.COMUNICATION_COLOR)
