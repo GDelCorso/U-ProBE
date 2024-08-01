@@ -23,7 +23,7 @@ class ImportSection:
         self.import_model_button = ctk.CTkButton(self.frame, text="Import Model (.pt)", font=st.BUTTON_FONT,command=self.select_model_file, corner_radius=10)
         self.import_model_button.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
 
-        self.import_dataloader_button = ctk.CTkButton(self.frame, text="Import DataLoader (.py)", font=st.BUTTON_FONT, command=self.import_dataset, corner_radius=10)
+        self.import_dataloader_button = ctk.CTkButton(self.frame, text="Import DataSet (.py)", font=st.BUTTON_FONT, command=self.import_dataset, corner_radius=10)
         self.import_dataloader_button.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
 
         self.import_dataset_button = ctk.CTkButton(self.frame, text="Import Data File (.csv)", font=st.BUTTON_FONT, command=self.import_datafile, corner_radius=10)

@@ -1,6 +1,6 @@
 import os   
 import customtkinter as ctk
-from pages.inference_page import InferencePage
+from pages.uprobe_page import UprobePage
 
 # Imposta il tema dell'applicazione
 ctk.set_appearance_mode("system")
@@ -21,7 +21,7 @@ class App(ctk.CTk):
         self.grid_columnconfigure(0, weight=1)
 
         # Crea e posiziona l'istanza di InferencePage
-        self.inference_page = InferencePage(self)
+        self.inference_page = UprobePage(self)
         self.inference_page.frame.grid(row=0, column=0, sticky="nsew")
 
         
