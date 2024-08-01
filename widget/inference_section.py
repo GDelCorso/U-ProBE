@@ -1,13 +1,16 @@
 import customtkinter as ctk
 from tkinter import filedialog as fd
-import csv
+import pandas as pd
 import os
-from config import AppStyles as st  # Importa le impostazioni di stile
+from config import AppStyles as st
+import importlib.util
+import torch as th
+from torch.utils.data import DataLoader
 
 class InferenceSection:
     def __init__(self, master, import_section):
         self.master = master
-        self.import_section = import_section  # Referenza all'oggetto ImportSection
+        self.import_section = import_section
 
         # Variabili per memorizzare lo stato delle checkbox
         self.options_state = {
@@ -75,30 +78,95 @@ class InferenceSection:
     def run_inference(self):
         # Cancella il messaggio di errore precedente
         self.status_label.configure(text="", font=st.STATUS_FONT)
-        
+
         # Verifica se almeno una checkbox è selezionata
         if not any(self.options_state.values()):
-            self.status_label.configure(text="Please select at least one post-hoc method before running inference.", text_color=st.ERROR_COLOR)
+            self.status_label.configure(
+                text="Please select at least one post-hoc method before running inference.",
+                text_color=st.ERROR_COLOR
+            )
             return
-        
+
         # Recupera i file importati
         model_file = self.import_section.get_model_file()
-        dataloader_file = self.import_section.get_dataloader_file()
         dataset_file = self.import_section.get_dataset_file()
-        
-        if not model_file or not dataloader_file or not dataset_file:
-            self.status_label.configure(text="Please ensure all required files are imported before running inference.", text_color=st.ERROR_COLOR)
+        data_file = self.import_section.get_data_file()
+
+        if not model_file or not dataset_file or not data_file:
+            self.status_label.configure(
+                text="Please ensure all required files are imported before running inference.",
+                text_color=st.ERROR_COLOR
+            )
             return
 
         # Messaggio di inferenza in corso
-        self.status_label.configure(text="Inference in progress...", text_color=st.COMUNICATION_COLOR)
+        self.status_label.configure(
+            text="Inference in progress... Please wait.",
+            text_color=st.COMUNICATION_COLOR
+        )
 
-        # Simula un processo di inferenza, usa lo stato delle checkbox
-        selected_options = [opt for opt, state in self.options_state.items() if state]
-        self.inference_results = [f"Result for {opt}" for opt in selected_options]
+        try:
+            # Importa la classe Dataset dal file del dataset
+            spec = importlib.util.spec_from_file_location("DatasetModule", dataset_file)
+            if spec is None:
+                raise ImportError(f"Cannot find the file: {dataset_file}")
+            dataset_module = importlib.util.module_from_spec(spec)
+            if spec.loader is None:
+                raise ImportError(f"Cannot load the loader for the module: {dataset_file}")
+            spec.loader.exec_module(dataset_module)
+            Dataset_imported = dataset_module.CustomDataset
 
-        # Messaggio di inferenza terminata
-        self.status_label.configure(text="Inference completed.", text_color=st.COMUNICATION_COLOR)
+            # Carica il dataset dal file CSV
+            data = pd.read_csv(data_file)
+            features = data.iloc[:, :-1].values  # Tutte le colonne tranne l'ultima sono le feature
+            targets = data.iloc[:, -1].values    # L'ultima colonna è il target
+
+            # Inizializza il dataset personalizzato e il dataloader
+            dataset = Dataset_imported(features, targets)
+            dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+
+            # Carica il modello addestrato
+            model = th.jit.load(model_file)
+            model.eval()
+
+            # Placeholder per i risultati dell'inferenza
+            self.inference_results = []
+
+            # Inferenza
+            with th.no_grad():
+                for batch_features, _ in dataloader:
+                    outputs = model(batch_features)
+                    self.inference_results.extend(outputs.numpy())
+
+            # Messaggio di completamento inferenza
+            self.status_label.configure(
+                text="Inference completed successfully. Results have been generated.",
+                text_color=st.COMUNICATION_COLOR
+            )
+
+        except ImportError as e:
+            self.status_label.configure(
+                text=f"Import Error: {e}",
+                text_color=st.ERROR_COLOR
+            )
+
+        except FileNotFoundError as e:
+            self.status_label.configure(
+                text=f"File Not Found: {e}",
+                text_color=st.ERROR_COLOR
+            )
+
+        except pd.errors.EmptyDataError as e:
+            self.status_label.configure(
+                text="Dataset file is empty or cannot be read.",
+                text_color=st.ERROR_COLOR
+            )
+
+        except Exception as e:
+            self.status_label.configure(
+                text=f"An unexpected error occurred: {e}",
+                text_color=st.ERROR_COLOR
+            )
 
     def export_results(self):
         # Cancella il messaggio di errore precedente
@@ -119,14 +187,11 @@ class InferenceSection:
         if file_path:
             # Estrai solo i nomi dei file dai percorsi
             model_file_name = os.path.basename(self.import_section.get_model_file())
-            dataset_file_name = os.path.basename(self.import_section.get_dataset_file())
+            data_file_name = os.path.basename(self.import_section.get_data_file())
 
             # Esporta i risultati in un file CSV
-            with open(file_path, mode='w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([f"Inference Results for file {model_file_name} on {dataset_file_name}"])
-                for result in self.inference_results:
-                    writer.writerow([result])
+            df = pd.DataFrame(self.inference_results, columns=[f"Inference Results for file {model_file_name} on {data_file_name}"])
+            df.to_csv(file_path, index=False)
             
             # Messaggio di esportazione completata
             self.status_label.configure(text=f"CSV file exported to {os.path.basename(file_path)}", text_color=st.COMUNICATION_COLOR)
