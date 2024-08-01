@@ -1,5 +1,5 @@
 class AppStyles:
-    # Definizione dei colori e del font
+    # Define the styles for the application
     HEADER_FONT = ("Arial", 20, "bold")
     COLUMN_FONT = ("Arial", 14, "bold")
     CELL_FONT = ("Arial", 10)

@@ -11,9 +11,9 @@ class InferenceSection:
     def __init__(self, master, import_section, results_table):
         self.master = master
         self.import_section = import_section
-        self.results_table = results_table  # Passa il riferimento a ResultsTable
+        self.results_table = results_table  # Reference to ResultsTable
 
-        # Variabili per memorizzare lo stato delle checkbox
+        # Variables to store the state of checkboxes
         self.options_state = {
             "Trustscore": False,
             "MC-Dropout": False,
@@ -22,65 +22,66 @@ class InferenceSection:
             "Few shot learning": False,
         }
 
-        # Creazione del frame principale
+        # Main frame setup
         self.frame = ctk.CTkFrame(master)
         self.frame.grid_rowconfigure((0, 1, 2), weight=1)
         self.frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
 
-        # Etichetta di intestazione per i metodi post-hoc
+        # Header label for post-hoc methods
         self.post_hoc_label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=st.HEADER_FONT)
         self.post_hoc_label.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="nsew")
 
-        # Lista di opzioni con checkbox per i metodi post-hoc
+        # Create checkboxes for post-hoc methods
         self.create_post_hoc_widgets()
 
-        # Creazione dei widget per l'esportazione
+        # Create widgets for export options
         self.create_export_widgets()
 
-        # Etichetta per messaggi di stato e errori, inizialmente vuota
+        # Status and error message label, initially empty
         self.status_label = ctk.CTkLabel(self.frame, text="", font=st.STATUS_FONT)
         self.status_label.grid(row=3, column=0, columnspan=2, padx=5, pady=2, sticky="nsew")
 
-        # Inizializzazione dei risultati dell'inferenza
+        # Initialize inference results
         self.inference_results = []
 
     def create_post_hoc_widgets(self):
-        # Costruzione dinamica della lista delle opzioni dalle chiavi di options_state
+        # Dynamically create checkboxes based on options_state keys
         options = list(self.options_state.keys())
 
-        # Creazione di una cornice per le checkbox
+        # Create a frame for the checkboxes
         self.checkbox_frame = ctk.CTkFrame(self.frame)
         self.checkbox_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=(5, 10), sticky="nsew")
 
-        # Disposizione delle checkbox in orizzontale e centrata
-        num_columns = 3  # Numero massimo di colonne per le checkbox
+        # Arrange checkboxes horizontally and centered
+        num_columns = 3  # Maximum number of columns for checkboxes
         self.checkboxes = {}
         for idx, option in enumerate(options):
             checkbox = ctk.CTkCheckBox(self.checkbox_frame, text=option, font=st.TEXT_FONT, command=lambda opt=option: self.update_option_state(opt))
             checkbox.grid(row=idx // num_columns, column=idx % num_columns, pady=2, padx=5, sticky="w")
             self.checkboxes[option] = checkbox
 
-        # Configura la griglia della checkbox_frame per far sì che i checkbox si adattino
+        # Configure checkbox_frame grid to make checkboxes adapt
         for i in range(num_columns):
             self.checkbox_frame.grid_columnconfigure(i, weight=1)
 
     def create_export_widgets(self):
-        # Pulsante per eseguire l'inferenza
+        # Button to run inference
         self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.run_inference, font=st.BUTTON_FONT)
         self.inference_button.grid(row=2, column=0, pady=5, padx=10, sticky="ew")
 
-        # Pulsante per esportare i risultati
+        # Button to export results
         self.export_button = ctk.CTkButton(self.frame, text="Export .csv", command=self.export_results, font=st.BUTTON_FONT)
         self.export_button.grid(row=2, column=1, pady=5, padx=10, sticky="ew")
 
     def update_option_state(self, option):
+        # Toggle the state of the specified option
         self.options_state[option] = not self.options_state[option]
 
     def run_inference(self):
-        # Cancella il messaggio di errore precedente
+        # Clear previous error messages
         self.status_label.configure(text="", font=st.STATUS_FONT)
 
-        # Verifica se almeno una checkbox è selezionata
+        # Check if at least one checkbox is selected
         if not any(self.options_state.values()):
             self.status_label.configure(
                 text="Please select at least one post-hoc method before running inference.",
@@ -88,7 +89,7 @@ class InferenceSection:
             )
             return
 
-        # Recupera i file importati
+        # Retrieve imported files
         model_file = self.import_section.get_model_file()
         dataset_file = self.import_section.get_dataset_file()
         data_file = self.import_section.get_data_file()
@@ -100,14 +101,14 @@ class InferenceSection:
             )
             return
 
-        # Messaggio di inferenza in corso
+        # Update status message to indicate inference progress
         self.status_label.configure(
             text="Inference in progress... Please wait.",
             text_color=st.COMUNICATION_COLOR
         )
 
         try:
-            # Importa la classe Dataset dal file del dataset
+            # Import the Dataset class from the dataset file
             spec = importlib.util.spec_from_file_location("DatasetModule", dataset_file)
             if spec is None:
                 raise ImportError(f"Cannot find the file: {dataset_file}")
@@ -117,65 +118,61 @@ class InferenceSection:
             spec.loader.exec_module(dataset_module)
             Dataset_imported = dataset_module.CustomDataset
 
-            # Carica il dataset dal file CSV
+            # Load the dataset from the CSV file
             data = pd.read_csv(data_file)
-            features = data.iloc[:, :-1].values  # Tutte le colonne tranne l'ultima sono le feature
-            targets = data.iloc[:, -1].values    # L'ultima colonna è il target
+            features = data.iloc[:, :-1].values  # All columns except the last are features
+            targets = data.iloc[:, -1].values    # The last column is the target
 
-            # Inizializza il dataset personalizzato e il dataloader
+            # Initialize custom dataset and dataloader
             dataset = Dataset_imported(features, targets)
             dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
 
-            # Carica il modello addestrato
+            # Load the trained model
             model = th.jit.load(model_file)
             model.eval()
 
-            # Placeholder per i risultati dell'inferenza
+            # Placeholder for inference results
             self.inference_results = []
 
-            # Inferenza
+            # Run inference
             with th.no_grad():
                 for batch_features, _ in dataloader:
                     outputs = model(batch_features)
                     self.inference_results.extend(outputs.numpy())
             
-            # Poi andranno elaborati in modo specifico
-            
-            # Blocco di prova
-            
+            # Fake results for testing
             self.fake_results = []
             self.fake_results.append([0.77, 0.84])
             
-            if(self.options_state["Trustscore"]):
+            if self.options_state["Trustscore"]:
                 self.fake_results.append(self.compute_trustscore())
             else:
                 self.fake_results.append(["N/A", "N/A"])
             
-            if(self.options_state["MC-Dropout"]):
+            if self.options_state["MC-Dropout"]:
                 self.fake_results.append(self.compute_mc_dropout())
             else:
                 self.fake_results.append(["N/A", "N/A"])          
             
-            if(self.options_state["Topological data analysis"]):
+            if self.options_state["Topological data analysis"]:
                 self.fake_results.append(self.compute_topological_data_analysis())
             else:
                 self.fake_results.append(["N/A", "N/A"])
                 
-            if(self.options_state["Ensemble"]):
+            if self.options_state["Ensemble"]:
                 self.fake_results.append(self.compute_ensemble())
             else:
                 self.fake_results.append(["N/A", "N/A"])
             
-            if(self.options_state["Few shot learning"]):
+            if self.options_state["Few shot learning"]:
                 self.fake_results.append(self.compute_few_shot_learning())
             else:
                 self.fake_results.append(["N/A", "N/A"])
                             
-            
-            # Aggiorna la tabella dei risultati
+            # Update the results table
             self.results_table.update_table(self.fake_results)
 
-            # Messaggio di completamento inferenza
+            # Update status message to indicate successful completion
             self.status_label.configure(
                 text="Inference completed successfully. Results have been generated.",
                 text_color=st.COMUNICATION_COLOR
@@ -206,35 +203,34 @@ class InferenceSection:
             )
             
     def compute_trustscore(self):
-        # Logica per calcolare Trustscore
+        # Logic to compute Trustscore
         return [0.77, 0.84]  
 
     def compute_mc_dropout(self):
-        # Logica per calcolare MC-Dropout
+        # Logic to compute MC-Dropout
         return [0.90, 0.91]  
 
     def compute_topological_data_analysis(self):
-        # Logica per calcolare Topological Data Analysis
+        # Logic to compute Topological Data Analysis
         return [0.78, 0.76]  
 
     def compute_ensemble(self):
-        # Logica per calcolare Ensemble
+        # Logic to compute Ensemble
         return [0.88, 0.87]  
 
     def compute_few_shot_learning(self):
-        # Logica per calcolare Few Shot Learning
+        # Logic to compute Few Shot Learning
         return [0.80, 0.82]  
 
-
     def export_results(self):
-        # Cancella il messaggio di errore precedente
+        # Clear previous error messages
         self.status_label.configure(text="", font=st.STATUS_FONT)
 
         if not self.inference_results:
             self.status_label.configure(text="No inference results to export.", text_color=st.ERROR_COLOR)
             return
         
-        # Chiede all'utente di selezionare un percorso per il file .csv
+        # Prompt the user to select a file path for saving the .csv file
         file_path = fd.asksaveasfilename(
             title='Save as',
             defaultextension='.csv',
@@ -243,13 +239,14 @@ class InferenceSection:
         )
         
         if file_path:
-            # Estrai solo i nomi dei file dai percorsi
+            # Extract only file names from paths
             model_file_name = os.path.basename(self.import_section.get_model_file())
             data_file_name = os.path.basename(self.import_section.get_data_file())
 
-            # Esporta i risultati in un file CSV
+            # Export
+            # Export results to a CSV file
             df = pd.DataFrame(self.inference_results, columns=[f"Inference Results for file {model_file_name} on {data_file_name}"])
             df.to_csv(file_path, index=False)
             
-            # Messaggio di esportazione completata
+            # Update status message to indicate successful export
             self.status_label.configure(text=f"CSV file exported to {os.path.basename(file_path)}", text_color=st.COMUNICATION_COLOR)

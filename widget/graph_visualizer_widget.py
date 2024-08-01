@@ -19,22 +19,21 @@ class GraphVisualizer:
         
         # Placeholder label for initial view
         self.placeholder_label = ctk.CTkLabel(self.frame, text="Graph Visualizer", font=st.HEADER_FONT)
-        self.placeholder_label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.placeholder_label.grid(row=0, column=0, padx=10, pady=(0,10), sticky="nsew")
         
         # Button to visualize the model
         self.visualize_button = ctk.CTkButton(self.frame, text="Visualize Neural Network", command=self.visualize_model, font=st.BUTTON_FONT)
-        self.visualize_button.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        self.visualize_button.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
         
         # Frame for displaying the graph
         self.graph_frame = ctk.CTkFrame(self.frame)
-        self.graph_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        self.graph_frame.grid(row=2, column=0, padx=10, pady=(5,10), sticky="nsew")
         self.frame.grid_rowconfigure(2, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
 
     def visualize_model(self):
         # Load and visualize the model when the button is clicked
         model_path = self.import_section.get_model_file()
-        
         if model_path is not None:
             model = self.load_model(model_path)
             if model:
@@ -59,5 +58,5 @@ class GraphVisualizer:
     def show_error(self, message):
         # Display an error message
         error_label = ctk.CTkLabel(self.frame, text=message, font=st.STATUS_FONT, text_color=st.ERROR_COLOR)
-        error_label.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
+        error_label.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
         self.frame.grid_rowconfigure(3, weight=1)

@@ -8,22 +8,22 @@ class UprobePage:
     def __init__(self, master):
         self.master = master
         
-        # Creazione del frame principale per la pagina di inferenza
+        # Main frame for the inference page
         self.frame = ctk.CTkFrame(self.master)
         self.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         
-        # Configurazione della griglia all'interno del frame
+        # Grid configuration
         for i in range(2):
             self.frame.grid_rowconfigure(i, weight=1)
             self.frame.grid_columnconfigure(i, weight=1)
 
-        # Creazione delle sezioni
+        # Create sections
         self.import_section = ImportSection(self.frame)
         self.graph_visualizer = GraphVisualizer(self.frame, self.import_section)
         self.results_table = ResultsTable(self.frame)  
         self.inference_section = InferenceSection(self.frame, self.import_section, self.results_table)  
 
-        # Posizionamento delle sezioni nella griglia
+        # Position sections in the grid
         self.import_section.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         self.graph_visualizer.frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
         self.inference_section.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
