@@ -19,9 +19,9 @@ class UprobePage:
 
         # Creazione delle sezioni
         self.import_section = ImportSection(self.frame)
-        self.graph_visualizer = GraphVisualizer(self.frame)
-        self.results_table = ResultsTable(self.frame)  # Crea ResultsTable prima di InferenceSection
-        self.inference_section = InferenceSection(self.frame, self.import_section, self.results_table)  # Passa ResultsTable a InferenceSection
+        self.graph_visualizer = GraphVisualizer(self.frame, self.import_section)
+        self.results_table = ResultsTable(self.frame)  
+        self.inference_section = InferenceSection(self.frame, self.import_section, self.results_table)  
 
         # Posizionamento delle sezioni nella griglia
         self.import_section.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
