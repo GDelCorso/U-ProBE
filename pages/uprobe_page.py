@@ -1,10 +1,10 @@
 import customtkinter as ctk
-from widget.import_section import ImportSection
-from widget.graph_visualizer import GraphVisualizer
-from widget.results_table import ResultsTable
-from widget.inference_section import InferenceSection
+from widget.import_widget import ImportSection
+from widget.graph_visualizer_widget import GraphVisualizer
+from widget.results_table_widget import ResultsTable
+from widget.inference_widget import InferenceSection
 
-class InferencePage:
+class UprobePage:
     def __init__(self, master):
         self.master = master
         
@@ -20,11 +20,11 @@ class InferencePage:
         # Creazione delle sezioni
         self.import_section = ImportSection(self.frame)
         self.graph_visualizer = GraphVisualizer(self.frame)
-        self.post_hoc_methods_section = InferenceSection(self.frame, self.import_section)
-        self.results_table = ResultsTable(self.frame)
+        self.results_table = ResultsTable(self.frame)  # Crea ResultsTable prima di InferenceSection
+        self.inference_section = InferenceSection(self.frame, self.import_section, self.results_table)  # Passa ResultsTable a InferenceSection
 
         # Posizionamento delle sezioni nella griglia
         self.import_section.frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         self.graph_visualizer.frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
-        self.post_hoc_methods_section.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+        self.inference_section.frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
         self.results_table.frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")

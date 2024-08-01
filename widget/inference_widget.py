@@ -8,9 +8,10 @@ import torch as th
 from torch.utils.data import DataLoader
 
 class InferenceSection:
-    def __init__(self, master, import_section):
+    def __init__(self, master, import_section, results_table):
         self.master = master
         self.import_section = import_section
+        self.results_table = results_table  # Passa il riferimento a ResultsTable
 
         # Variabili per memorizzare lo stato delle checkbox
         self.options_state = {
@@ -123,7 +124,7 @@ class InferenceSection:
 
             # Inizializza il dataset personalizzato e il dataloader
             dataset = Dataset_imported(features, targets)
-            dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+            dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
 
             # Carica il modello addestrato
             model = th.jit.load(model_file)
@@ -137,6 +138,42 @@ class InferenceSection:
                 for batch_features, _ in dataloader:
                     outputs = model(batch_features)
                     self.inference_results.extend(outputs.numpy())
+            
+            # Poi andranno elaborati in modo specifico
+            
+            # Blocco di prova
+            
+            self.fake_results = []
+            self.fake_results.append([0.77, 0.84])
+            
+            if(self.options_state["Trustscore"]):
+                self.fake_results.append(self.compute_trustscore())
+            else:
+                self.fake_results.append(["N/A", "N/A"])
+            
+            if(self.options_state["MC-Dropout"]):
+                self.fake_results.append(self.compute_mc_dropout())
+            else:
+                self.fake_results.append(["N/A", "N/A"])          
+            
+            if(self.options_state["Topological data analysis"]):
+                self.fake_results.append(self.compute_topological_data_analysis())
+            else:
+                self.fake_results.append(["N/A", "N/A"])
+                
+            if(self.options_state["Ensemble"]):
+                self.fake_results.append(self.compute_ensemble())
+            else:
+                self.fake_results.append(["N/A", "N/A"])
+            
+            if(self.options_state["Few shot learning"]):
+                self.fake_results.append(self.compute_few_shot_learning())
+            else:
+                self.fake_results.append(["N/A", "N/A"])
+                            
+            
+            # Aggiorna la tabella dei risultati
+            self.results_table.update_table(self.fake_results)
 
             # Messaggio di completamento inferenza
             self.status_label.configure(
@@ -167,6 +204,27 @@ class InferenceSection:
                 text=f"An unexpected error occurred: {e}",
                 text_color=st.ERROR_COLOR
             )
+            
+    def compute_trustscore(self):
+        # Logica per calcolare Trustscore
+        return [0.77, 0.84]  
+
+    def compute_mc_dropout(self):
+        # Logica per calcolare MC-Dropout
+        return [0.90, 0.91]  
+
+    def compute_topological_data_analysis(self):
+        # Logica per calcolare Topological Data Analysis
+        return [0.78, 0.76]  
+
+    def compute_ensemble(self):
+        # Logica per calcolare Ensemble
+        return [0.88, 0.87]  
+
+    def compute_few_shot_learning(self):
+        # Logica per calcolare Few Shot Learning
+        return [0.80, 0.82]  
+
 
     def export_results(self):
         # Cancella il messaggio di errore precedente
