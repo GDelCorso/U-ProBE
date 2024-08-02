@@ -25,6 +25,8 @@ class App(ctk.CTk):
         # Create and place the UprobePage instance
         self.inference_page = UprobePage(self)
         self.inference_page.frame.grid(row=0, column=0, sticky="nsew")
+        
+        self.minsize(720, 420)
 
 # Run the application
 app = App()

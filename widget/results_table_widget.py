@@ -17,9 +17,9 @@ class ResultsTable:
         tk.Label(self.frame, text="Prediction", font=st.COLUMN_FONT, bg=st.HEADER_BG, fg=st.HEADER_FG).grid(row=0, column=2, sticky='nsew', padx=1, pady=1)
         
         # Configure the columns of the main frame
-        self.frame.grid_columnconfigure(0, weight=1, minsize=150)
-        self.frame.grid_columnconfigure(1, weight=1, minsize=150)
-        self.frame.grid_columnconfigure(2, weight=1, minsize=150)
+        self.frame.grid_columnconfigure(0, weight=1)
+        self.frame.grid_columnconfigure(1, weight=1)
+        self.frame.grid_columnconfigure(2, weight=1)
 
         # Dictionary to store references to widgets
         self.labels = {

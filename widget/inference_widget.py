@@ -254,4 +254,4 @@ class InferenceSection:
     def show_message(self, message, color):
         # Display a message with the specified color
         self.status_label.configure(text=message, text_color=color)
-        self.frame.grid_rowconfigure(3, weight=0)  # Ensure the status label row doesn't grow
+        self.frame.grid_rowconfigure(3, weight=0) 
