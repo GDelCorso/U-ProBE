@@ -78,14 +78,14 @@ class InferenceSection:
         self.options_state[option] = not self.options_state[option]
 
     def run_inference(self):
-        # Clear previous error messages
-        self.status_label.configure(text="", font=st.STATUS_FONT)
+        # Clear previous messages
+        self.show_message("", st.COMUNICATION_COLOR)
 
         # Check if at least one checkbox is selected
         if not any(self.options_state.values()):
-            self.status_label.configure(
-                text="Please select at least one post-hoc method before running inference.",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                "Please select at least one post-hoc method before running inference.",
+                st.ERROR_COLOR
             )
             return
 
@@ -95,16 +95,16 @@ class InferenceSection:
         data_file = self.import_section.get_data_file()
 
         if not model_file or not dataset_file or not data_file:
-            self.status_label.configure(
-                text="Please ensure all required files are imported before running inference.",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                "Please ensure all required files are imported before running inference.",
+                st.ERROR_COLOR
             )
             return
 
         # Update status message to indicate inference progress
-        self.status_label.configure(
-            text="Inference in progress... Please wait.",
-            text_color=st.COMUNICATION_COLOR
+        self.show_message(
+            "Inference in progress... Please wait.",
+            st.COMUNICATION_COLOR
         )
 
         try:
@@ -173,33 +173,33 @@ class InferenceSection:
             self.results_table.update_table(self.fake_results)
 
             # Update status message to indicate successful completion
-            self.status_label.configure(
-                text="Inference completed successfully. Results have been generated.",
-                text_color=st.COMUNICATION_COLOR
+            self.show_message(
+                "Inference completed successfully. Results have been generated.",
+                st.COMUNICATION_COLOR
             )
 
         except ImportError as e:
-            self.status_label.configure(
-                text=f"Import Error: {e}",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                f"Import Error: {e}",
+                st.ERROR_COLOR
             )
 
         except FileNotFoundError as e:
-            self.status_label.configure(
-                text=f"File Not Found: {e}",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                f"File Not Found: {e}",
+                st.ERROR_COLOR
             )
 
         except pd.errors.EmptyDataError as e:
-            self.status_label.configure(
-                text="Dataset file is empty or cannot be read.",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                "Dataset file is empty or cannot be read.",
+                st.ERROR_COLOR
             )
 
         except Exception as e:
-            self.status_label.configure(
-                text=f"An unexpected error occurred: {e}",
-                text_color=st.ERROR_COLOR
+            self.show_message(
+                f"An unexpected error occurred: {e}",
+                st.ERROR_COLOR
             )
             
     def compute_trustscore(self):
@@ -223,11 +223,11 @@ class InferenceSection:
         return [0.80, 0.82]  
 
     def export_results(self):
-        # Clear previous error messages
-        self.status_label.configure(text="", font=st.STATUS_FONT)
+        # Clear previous messages
+        self.show_message("", st.COMUNICATION_COLOR)
 
         if not self.inference_results:
-            self.status_label.configure(text="No inference results to export.", text_color=st.ERROR_COLOR)
+            self.show_message("No inference results to export.", st.ERROR_COLOR)
             return
         
         # Prompt the user to select a file path for saving the .csv file
@@ -249,4 +249,9 @@ class InferenceSection:
             df.to_csv(file_path, index=False)
             
             # Update status message to indicate successful export
-            self.status_label.configure(text=f"CSV file exported to {os.path.basename(file_path)}", text_color=st.COMUNICATION_COLOR)
+            self.show_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)
+            
+    def show_message(self, message, color):
+        # Display a message with the specified color
+        self.status_label.configure(text=message, text_color=color)
+        self.frame.grid_rowconfigure(3, weight=0)  # Ensure the status label row doesn't grow
