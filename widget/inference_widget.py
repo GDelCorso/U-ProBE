@@ -8,13 +8,15 @@ import torch as th
 from torch.utils.data import DataLoader
 
 class InferenceSection:
-    def __init__(self, master, import_section, results_table):
+    def __init__(self, master, import_section, results_table, comunication_section):
         self.master = master
         self.import_section = import_section
-        self.results_table = results_table  # Reference to ResultsTable
+        self.results_table = results_table 
+        self.comunication_section = comunication_section
 
         # Variables to store the state of checkboxes
         self.options_state = {
+            "No post-hoc method": False,
             "Trustscore": False,
             "MC-Dropout": False,
             "Topological data analysis": False,
@@ -32,19 +34,15 @@ class InferenceSection:
         self.post_hoc_label.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="nsew")
 
         # Create checkboxes for post-hoc methods
-        self.create_post_hoc_widgets()
+        self.create_inference_widgets()
 
         # Create widgets for export options
-        self.create_export_widgets()
-
-        # Status and error message label, initially empty
-        self.status_label = ctk.CTkLabel(self.frame, text="", font=st.STATUS_FONT)
-        self.status_label.grid(row=3, column=0, columnspan=2, padx=5, pady=2, sticky="nsew")
+        self.create_buttons_widgets()
 
         # Initialize inference results
         self.inference_results = []
 
-    def create_post_hoc_widgets(self):
+    def create_inference_widgets(self):
         # Dynamically create checkboxes based on options_state keys
         options = list(self.options_state.keys())
 
@@ -64,7 +62,7 @@ class InferenceSection:
         for i in range(num_columns):
             self.checkbox_frame.grid_columnconfigure(i, weight=1)
 
-    def create_export_widgets(self):
+    def create_buttons_widgets(self):
         # Button to run inference
         self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.run_inference, font=st.BUTTON_FONT)
         self.inference_button.grid(row=2, column=0, pady=5, padx=10, sticky="ew")
@@ -79,11 +77,16 @@ class InferenceSection:
 
     def run_inference(self):
         # Clear previous messages
-        self.show_message("", st.COMUNICATION_COLOR)
+        self.comunication_section.display_message("", st.COMUNICATION_COLOR)
 
+        # Check if all required files are imported
+        if not self.import_section.get_model_file() or not self.import_section.get_dataset_file() or not self.import_section.get_data_file():
+            self.comunication_section.display_message("Please ensure all required files are imported before running inference.", st.ERROR_COLOR)
+            return
+        
         # Check if at least one checkbox is selected
         if not any(self.options_state.values()):
-            self.show_message(
+            self.comunication_section.display_message(
                 "Please select at least one post-hoc method before running inference.",
                 st.ERROR_COLOR
             )
@@ -91,40 +94,41 @@ class InferenceSection:
 
         # Retrieve imported files
         model_file = self.import_section.get_model_file()
-        dataset_file = self.import_section.get_dataset_file()
+        dataset_loader_file = self.import_section.get_dataset_file()
         data_file = self.import_section.get_data_file()
 
-        if not model_file or not dataset_file or not data_file:
-            self.show_message(
+        if not model_file or not dataset_loader_file or not data_file:
+            self.comunication_section.display_message(
                 "Please ensure all required files are imported before running inference.",
                 st.ERROR_COLOR
             )
             return
 
-        # Update status message to indicate inference progress
-        self.show_message(
+        # Start progress indication
+        self.comunication_section.start_progress()
+        self.comunication_section.display_message(
             "Inference in progress... Please wait.",
             st.COMUNICATION_COLOR
         )
 
         try:
             # Import the Dataset class from the dataset file
-            spec = importlib.util.spec_from_file_location("DatasetModule", dataset_file)
+            spec = importlib.util.spec_from_file_location("DatasetModule", dataset_loader_file)
             if spec is None:
-                raise ImportError(f"Cannot find the file: {dataset_file}")
+                self.comunication_section.display_message(f"Cannot find the file: {dataset_loader_file}", st.ERROR_COLOR)
+                return
             dataset_module = importlib.util.module_from_spec(spec)
             if spec.loader is None:
-                raise ImportError(f"Cannot load the loader for the module: {dataset_file}")
+                self.comunication_section.display_message(f"Cannot load the loader for the module: {dataset_loader_file}", st.ERROR_COLOR)
+                return
             spec.loader.exec_module(dataset_module)
-            Dataset_imported = dataset_module.CustomDataset
+            dataset_loader_imported = dataset_module.CustomLoader
 
             # Load the dataset from the CSV file
             data = pd.read_csv(data_file)
-            features = data.iloc[:, :-1].values  # All columns except the last are features
-            targets = data.iloc[:, -1].values    # The last column is the target
-
+            
             # Initialize custom dataset and dataloader
-            dataset = Dataset_imported(features, targets)
+            dataset = dataset_loader_imported(data)
             dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
 
             # Load the trained model
@@ -173,35 +177,39 @@ class InferenceSection:
             self.results_table.update_table(self.fake_results)
 
             # Update status message to indicate successful completion
-            self.show_message(
+            self.comunication_section.display_message(
                 "Inference completed successfully. Results have been generated.",
                 st.COMUNICATION_COLOR
             )
 
         except ImportError as e:
-            self.show_message(
+            self.comunication_section.display_message(
                 f"Import Error: {e}",
                 st.ERROR_COLOR
             )
 
         except FileNotFoundError as e:
-            self.show_message(
+            self.comunication_section.display_message(
                 f"File Not Found: {e}",
                 st.ERROR_COLOR
             )
 
         except pd.errors.EmptyDataError as e:
-            self.show_message(
+            self.comunication_section.display_message(
                 "Dataset file is empty or cannot be read.",
                 st.ERROR_COLOR
             )
 
         except Exception as e:
-            self.show_message(
+            self.comunication_section.display_message(
                 f"An unexpected error occurred: {e}",
                 st.ERROR_COLOR
             )
-            
+
+        finally:
+            # Stop progress indication
+            self.comunication_section.stop_progress()
+
     def compute_trustscore(self):
         # Logic to compute Trustscore
         return [0.77, 0.84]  
@@ -224,10 +232,10 @@ class InferenceSection:
 
     def export_results(self):
         # Clear previous messages
-        self.show_message("", st.COMUNICATION_COLOR)
+        self.comunication_section.display_message("", st.COMUNICATION_COLOR)
 
         if not self.inference_results:
-            self.show_message("No inference results to export.", st.ERROR_COLOR)
+            self.comunication_section.display_message("No inference results to export.", st.ERROR_COLOR)
             return
         
         # Prompt the user to select a file path for saving the .csv file
@@ -243,15 +251,9 @@ class InferenceSection:
             model_file_name = os.path.basename(self.import_section.get_model_file())
             data_file_name = os.path.basename(self.import_section.get_data_file())
 
-            # Export
             # Export results to a CSV file
             df = pd.DataFrame(self.inference_results, columns=[f"Inference Results for file {model_file_name} on {data_file_name}"])
             df.to_csv(file_path, index=False)
             
             # Update status message to indicate successful export
-            self.show_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)
-            
-    def show_message(self, message, color):
-        # Display a message with the specified color
-        self.status_label.configure(text=message, text_color=color)
-        self.frame.grid_rowconfigure(3, weight=0) 
+            self.comunication_section.display_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)

@@ -3,9 +3,10 @@ import customtkinter as ctk
 from config import AppStyles as st  
 
 class ResultsTable:
-    def __init__(self, master):
+    def __init__(self, master, comunication_section):
         self.master = master
         self.data = None  # Initial data set to None
+        self.comunication_section = comunication_section
 
         # Create the main frame for displaying the table
         self.frame = ctk.CTkFrame(self.master, corner_radius=15, fg_color=st.CELL_BG)
