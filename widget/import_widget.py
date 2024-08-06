@@ -162,7 +162,9 @@ class ImportSection:
     def show_image_dialog(self, model):
         # Visualize the model architecture and get the image
         first_parameter = next(model.parameters())
-        input_shape = first_parameter.size()
+        weight_matrix = first_parameter.size()
+        batch_size = 4
+        input_shape = (batch_size, weight_matrix[1])
         img = visualtorch.graph_view(model, input_shape)
         
         # Create and open the image dialog directly with the image object
