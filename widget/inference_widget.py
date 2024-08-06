@@ -6,6 +6,7 @@ from config import AppStyles as st
 import importlib.util
 import torch as th
 from torch.utils.data import DataLoader
+from multiprocessing import Process, Manager
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
@@ -83,7 +84,7 @@ class InferenceSection:
         if not self.import_section.get_model_file() or not self.import_section.get_dataset_file() or not self.import_section.get_data_file():
             self.comunication_section.display_message("Please ensure all required files are imported before running inference.", st.ERROR_COLOR)
             return
-        
+
         # Check if at least one checkbox is selected
         if not any(self.options_state.values()):
             self.comunication_section.display_message(
@@ -122,11 +123,17 @@ class InferenceSection:
                 self.comunication_section.display_message(f"Cannot load the loader for the module: {dataset_loader_file}", st.ERROR_COLOR)
                 return
             spec.loader.exec_module(dataset_module)
+
+            # Check if CustomLoader class exists in the module
+            if not hasattr(dataset_module, 'CustomLoader'):
+                self.comunication_section.display_message(f"The file {dataset_loader_file} does not contain a CustomLoader class.", st.ERROR_COLOR)
+                return
+            
             dataset_loader_imported = dataset_module.CustomLoader
 
             # Load the dataset from the CSV file
             data = pd.read_csv(data_file)
-            
+
             # Initialize custom dataset and dataloader
             dataset = dataset_loader_imported(data)
             dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
@@ -143,36 +150,36 @@ class InferenceSection:
                 for batch_features, _ in dataloader:
                     outputs = model(batch_features)
                     self.inference_results.extend(outputs.numpy())
-            
+
             # Fake results for testing
             self.fake_results = []
             self.fake_results.append([0.77, 0.84])
-            
+
             if self.options_state["Trustscore"]:
                 self.fake_results.append(self.compute_trustscore())
             else:
                 self.fake_results.append(["N/A", "N/A"])
-            
+
             if self.options_state["MC-Dropout"]:
                 self.fake_results.append(self.compute_mc_dropout())
             else:
-                self.fake_results.append(["N/A", "N/A"])          
-            
+                self.fake_results.append(["N/A", "N/A"])
+
             if self.options_state["Topological data analysis"]:
                 self.fake_results.append(self.compute_topological_data_analysis())
             else:
                 self.fake_results.append(["N/A", "N/A"])
-                
+
             if self.options_state["Ensemble"]:
                 self.fake_results.append(self.compute_ensemble())
             else:
                 self.fake_results.append(["N/A", "N/A"])
-            
+
             if self.options_state["Few shot learning"]:
                 self.fake_results.append(self.compute_few_shot_learning())
             else:
                 self.fake_results.append(["N/A", "N/A"])
-                            
+
             # Update the results table
             self.results_table.update_table(self.fake_results)
 
