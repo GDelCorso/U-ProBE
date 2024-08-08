@@ -6,7 +6,8 @@ from config import AppStyles as st
 import importlib.util
 import torch as th
 from torch.utils.data import DataLoader
-from multiprocessing import Process, Manager
+# import multiprocessing
+# from multiprocessing import Process
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
@@ -151,6 +152,29 @@ class InferenceSection:
                     outputs = model(batch_features)
                     self.inference_results.extend(outputs.numpy())
 
+
+            #def aux_fun(index, return_dict, batch_features, model):
+            #    return_dict[index] = model(batch_features)
+                
+                
+
+            # # Run inference
+            # with th.no_grad():
+            #     manager = multiprocessing.Manager()
+            #     return_dict = manager.dict()
+            #     i = 0
+            #     procs = []
+            #     for batch_features, _ in dataloader:
+            #         proc = Process(target=aux_fun, args=(i, return_dict, batch_features, model)) 
+            #         procs.append(proc)
+            #         proc.start
+            #         i+=1
+            #     for proc in procs:
+            #         proc.join()
+            
+            # #print("Return Dics =", return_dict.values())
+
+            
             # Fake results for testing
             self.fake_results = []
             self.fake_results.append([0.77, 0.84])
@@ -214,7 +238,7 @@ class InferenceSection:
             )
 
         finally:
-            # Stop progress indication
+            # Stop progress bar
             self.comunication_section.stop_progress()
 
     def compute_trustscore(self):
