@@ -4,8 +4,7 @@ import os
 from config import AppStyles as st
 import visualtorch
 import torch
-from widget.dialog_image import ImageDialog
-
+from widget.graph_visualization import ImageDialog
 class ImportSection:
     def __init__(self, master, comunication_section):
         self.master = master
@@ -161,12 +160,44 @@ class ImportSection:
             
     def show_image_dialog(self, model):
         # Visualize the model architecture and get the image
-        first_parameter = next(model.parameters())
-        weight_matrix = first_parameter.size()
+
         batch_size = 4
-        input_shape = (batch_size, weight_matrix[1])
-        img = visualtorch.graph_view(model, input_shape)
+    
+        num_hidden_layers = self.count_layers(self.list_original_names(model))-1
+        
+        if self.is_any_layer_conv(model):
+            num_channels = 1
+            height = 28
+            width = 28
+            input_shape = (batch_size, num_channels, height, width) 
+            img = visualtorch.graph_view(model, input_shape=input_shape, node_size=40, padding=20, layer_spacing=150)
+        else:
+            first_parameter = next(model.parameters())
+            weight_matrix = first_parameter.size()
+            input_shape = (batch_size, weight_matrix[1])
+            img = visualtorch.graph_view(model, input_shape=input_shape, node_size=40, padding=20, layer_spacing=150)
+        
         
         # Create and open the image dialog directly with the image object
-        dialog = ImageDialog(self.master, img) 
+        dialog = ImageDialog(self.master, img, num_hidden_layers) 
         dialog.mainloop()
+
+    def is_any_layer_conv(self, model):
+        return any("Conv2d" in name for name in self.list_original_names(model))
+    
+    def list_original_names(self, module, names=None):
+        if names is None:
+            names = []
+
+        if hasattr(module, 'original_name'):
+            names.append(module.original_name)
+
+        for child in module.children():
+            self.list_original_names(child, names)
+
+        return names
+    
+    def count_layers(self, layers_list):
+        linear_count = layers_list.count("Linear")
+        conv2d_count = layers_list.count("Conv2d")
+        return linear_count + conv2d_count
