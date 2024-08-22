@@ -27,6 +27,11 @@ class App(ctk.CTk):
         self.inference_page.frame.grid(row=0, column=0, sticky="nsew")
         
         self.minsize(720, 420)
+        
+        # Bring the window to the front
+        self.lift()
+        self.attributes('-topmost', True)
+        self.after_idle(self.attributes, '-topmost', False)
 
 # Run the application
 app = App()
