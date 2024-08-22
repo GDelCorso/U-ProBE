@@ -6,6 +6,7 @@ from config import AppStyles as st
 import importlib.util
 import torch as th
 from torch.utils.data import DataLoader
+import numpy as np
 # import multiprocessing
 # from multiprocessing import Process
 
@@ -40,13 +41,16 @@ class InferenceSection:
 
         # Create widgets for export options
         self.create_buttons_widgets()
+        
+        # Initialize results dataframe
+        self.results_df = None
+        
 
-        # Initialize inference results
-        self.inference_results = []
+
 
     def create_inference_widgets(self):
         # Dynamically create checkboxes based on options_state keys
-        options = list(self.options_state.keys())
+        self.options = list(self.options_state.keys())
 
         # Create a frame for the checkboxes
         self.checkbox_frame = ctk.CTkFrame(self.frame)
@@ -55,7 +59,7 @@ class InferenceSection:
         # Arrange checkboxes horizontally and centered
         num_columns = 3  # Maximum number of columns for checkboxes
         self.checkboxes = {}
-        for idx, option in enumerate(options):
+        for idx, option in enumerate(self.options):
             checkbox = ctk.CTkCheckBox(self.checkbox_frame, text=option, font=st.TEXT_FONT, command=lambda opt=option: self.update_option_state(opt))
             checkbox.grid(row=idx // num_columns, column=idx % num_columns, pady=2, padx=5, sticky="w")
             self.checkboxes[option] = checkbox
@@ -66,7 +70,7 @@ class InferenceSection:
 
     def create_buttons_widgets(self):
         # Button to run inference
-        self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.run_inference, font=st.BUTTON_FONT)
+        self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.do_inference, font=st.BUTTON_FONT)
         self.inference_button.grid(row=2, column=0, pady=5, padx=10, sticky="ew")
 
         # Button to export results
@@ -77,7 +81,7 @@ class InferenceSection:
         # Toggle the state of the specified option
         self.options_state[option] = not self.options_state[option]
 
-    def run_inference(self):
+    def do_inference(self):
         # Clear previous messages
         self.comunication_section.display_message("", st.COMUNICATION_COLOR)
 
@@ -141,78 +145,16 @@ class InferenceSection:
 
             # Load the trained model
             model = th.jit.load(model_file)
-            model.eval()
 
-            # Placeholder for inference results
-            self.inference_results = []
+            self.run_inference(model, dataloader, data_file)
 
-            # Run inference
-            with th.no_grad():
-                for batch_features, _ in dataloader:
-                    outputs = model(batch_features)
-                    self.inference_results.extend(outputs.numpy())
-
-
-            #def aux_fun(index, return_dict, batch_features, model):
-            #    return_dict[index] = model(batch_features)
-                
-                
-
-            # # Run inference
-            # with th.no_grad():
-            #     manager = multiprocessing.Manager()
-            #     return_dict = manager.dict()
-            #     i = 0
-            #     procs = []
-            #     for batch_features, _ in dataloader:
-            #         proc = Process(target=aux_fun, args=(i, return_dict, batch_features, model)) 
-            #         procs.append(proc)
-            #         proc.start
-            #         i+=1
-            #     for proc in procs:
-            #         proc.join()
-            
-            # #print("Return Dics =", return_dict.values())
-
-            
-            # Fake results for testing
-            self.fake_results = []
-            self.fake_results.append([0.77, 0.84])
-
-            if self.options_state["Trustscore"]:
-                self.fake_results.append(self.compute_trustscore())
-            else:
-                self.fake_results.append(["N/A", "N/A"])
-
-            if self.options_state["MC-Dropout"]:
-                self.fake_results.append(self.compute_mc_dropout())
-            else:
-                self.fake_results.append(["N/A", "N/A"])
-
-            if self.options_state["Topological data analysis"]:
-                self.fake_results.append(self.compute_topological_data_analysis())
-            else:
-                self.fake_results.append(["N/A", "N/A"])
-
-            if self.options_state["Ensemble"]:
-                self.fake_results.append(self.compute_ensemble())
-            else:
-                self.fake_results.append(["N/A", "N/A"])
-
-            if self.options_state["Few shot learning"]:
-                self.fake_results.append(self.compute_few_shot_learning())
-            else:
-                self.fake_results.append(["N/A", "N/A"])
-
-            # Update the results table
-            self.results_table.update_table(self.fake_results)
 
             # Update status message to indicate successful completion
             self.comunication_section.display_message(
                 "Inference completed successfully. Results have been generated.",
                 st.COMUNICATION_COLOR
             )
-
+            
         except ImportError as e:
             self.comunication_section.display_message(
                 f"Import Error: {e}",
@@ -240,32 +182,113 @@ class InferenceSection:
         finally:
             # Stop progress bar
             self.comunication_section.stop_progress()
+            
+    def run_inference(self, model, dataloader, data_file):
+        original_data = pd.read_csv(data_file)
+        
+        # Generate fictitious results
+        num_samples = len(original_data)
+        
+        self.results_df = pd.DataFrame({"Id": original_data['id']})
+        
+        # Add selected post-hoc methods with fictitious results
+        if self.options_state["No post-hoc method"]:
+            self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
+            
+        if self.options_state["Trustscore"]:
+            self.results_df['Trustscore'] = self.compute_trustscore(num_samples)
+            
+        if self.options_state["MC-Dropout"]:
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(num_samples)
+            
+        if self.options_state["Topological data analysis"]:
+            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(num_samples)
+            
+        if self.options_state["Ensemble"]:
+            self.results_df['Ensemble'] = self.compute_ensemble(num_samples)
+            
+        if self.options_state["Few shot learning"]:
+            self.results_df['Few shot learning'] = self.compute_few_shot_learning(num_samples)
+            
+        self.calculate_statistics(self.results_df)
+        
+        self.update_table()
+        
+        
+        
+        
+    def compute_no_post_hoc_method(self, model, dataloader):
+        model.eval()
+        inference_results = []
 
-    def compute_trustscore(self):
+        # Run inference
+        with th.no_grad():
+            for batch_features, _ in dataloader:
+                outputs = model(batch_features)
+                inference_results.extend(outputs.numpy())
+    
+        return np.array(inference_results)
+        
+
+    def compute_trustscore(self, num_samples):
         # Logic to compute Trustscore
-        return [0.77, 0.84]  
+        return np.random.uniform(0.5, 1.0, num_samples) 
 
-    def compute_mc_dropout(self):
+    def compute_mc_dropout(self, num_samples):
         # Logic to compute MC-Dropout
-        return [0.90, 0.91]  
+        return np.random.uniform(0.6, 0.95, num_samples)  
 
-    def compute_topological_data_analysis(self):
+    def compute_topological_data_analysis(self, num_samples):
         # Logic to compute Topological Data Analysis
-        return [0.78, 0.76]  
+        return np.random.uniform(0.7, 0.9, num_samples)
 
-    def compute_ensemble(self):
+    def compute_ensemble(self, num_samples):
         # Logic to compute Ensemble
-        return [0.88, 0.87]  
+        return np.random.uniform(0.75, 0.98, num_samples)
 
-    def compute_few_shot_learning(self):
+    def compute_few_shot_learning(self, num_samples):
         # Logic to compute Few Shot Learning
-        return [0.80, 0.82]  
+        return np.random.uniform(0.65, 0.92, num_samples)
 
+    def calculate_statistics(self, data):
+            self.stats = {}
+            for column in data.columns:
+                if column not in ['Id']:
+                    self.stats[column] = {
+                        'mean': np.mean(data[column]),
+                        'std': np.std(data[column]),
+                        'min': np.min(data[column]),
+                        'max': np.max(data[column])
+                    }
+                    
+    def update_table(self):
+        results_to_table = []
+        for method in self.options:
+            get_stats = self.get_stats(method)
+            results_to_table.append(get_stats)
+        
+        self.results_table.update_table(results_to_table)
+        
+    def get_stats(self, name):
+        if name in self.stats:
+            mean = self.stats[name]['mean']
+            std = self.stats[name]['std']
+    
+            # Formattare i numeri a 3 decimali
+            mean_formatted = "{:.3f}".format(mean)
+            std_formatted = "{:.3f}".format(std)
+            return [mean_formatted, std_formatted]
+            
+        else:
+            return ["N/A", "N/A"]
+
+        
+       # self.results_table.update_results(results_to_table)
     def export_results(self):
         # Clear previous messages
         self.comunication_section.display_message("", st.COMUNICATION_COLOR)
 
-        if not self.inference_results:
+        if self.results_df is None or self.results_df.empty:
             self.comunication_section.display_message("No inference results to export.", st.ERROR_COLOR)
             return
         
@@ -277,14 +300,18 @@ class InferenceSection:
             initialfile='results.csv'
         )
         
-        if file_path:
-            # Extract only file names from paths
-            model_file_name = os.path.basename(self.import_section.get_model_file())
-            data_file_name = os.path.basename(self.import_section.get_data_file())
-
-            # Export results to a CSV file
-            df = pd.DataFrame(self.inference_results, columns=[f"Inference Results for file {model_file_name} on {data_file_name}"])
-            df.to_csv(file_path, index=False)
+        if file_path:            
+        
+            with open(file_path, 'w') as f:
+                f.write("\n\nStatistics:\n")
+                for column, column_stats in self.stats.items():
+                    f.write(f"\n{column}:\n")
+                    for stat, value in column_stats.items():
+                        f.write(f"{stat}: {value:.2f}\n")
+                f.write("\n\nResults:\n")
+            self.results_df.to_csv(file_path, mode='a', index=False)
             
+            
+
             # Update status message to indicate successful export
             self.comunication_section.display_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)
