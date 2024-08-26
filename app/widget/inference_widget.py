@@ -7,8 +7,6 @@ import importlib.util
 import torch as th
 from torch.utils.data import DataLoader
 import numpy as np
-# import multiprocessing
-# from multiprocessing import Process
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
@@ -68,6 +66,9 @@ class InferenceSection:
         for i in range(num_columns):
             self.checkbox_frame.grid_columnconfigure(i, weight=1)
 
+
+
+
     def create_buttons_widgets(self):
         # Button to run inference
         self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.do_inference, font=st.BUTTON_FONT)
@@ -77,9 +78,15 @@ class InferenceSection:
         self.export_button = ctk.CTkButton(self.frame, text="Export .csv", command=self.export_results, font=st.BUTTON_FONT)
         self.export_button.grid(row=2, column=1, pady=5, padx=10, sticky="ew")
 
+
+
+
     def update_option_state(self, option):
         # Toggle the state of the specified option
         self.options_state[option] = not self.options_state[option]
+
+
+
 
     def do_inference(self):
         # Clear previous messages
@@ -148,7 +155,6 @@ class InferenceSection:
 
             self.run_inference(model, dataloader, data_file)
 
-
             # Update status message to indicate successful completion
             self.comunication_section.display_message(
                 "Inference completed successfully. Results have been generated.",
@@ -182,6 +188,9 @@ class InferenceSection:
         finally:
             # Stop progress bar
             self.comunication_section.stop_progress()
+            
+            
+            
             
     def run_inference(self, model, dataloader, data_file):
         original_data = pd.read_csv(data_file)
@@ -229,37 +238,57 @@ class InferenceSection:
     
         return np.array(inference_results)
         
+        
+        
 
     def compute_trustscore(self, num_samples):
         # Logic to compute Trustscore
         return np.random.uniform(0.5, 1.0, num_samples) 
 
+
+
+
     def compute_mc_dropout(self, num_samples):
         # Logic to compute MC-Dropout
         return np.random.uniform(0.6, 0.95, num_samples)  
+
+
+
 
     def compute_topological_data_analysis(self, num_samples):
         # Logic to compute Topological Data Analysis
         return np.random.uniform(0.7, 0.9, num_samples)
 
+
+
+
     def compute_ensemble(self, num_samples):
         # Logic to compute Ensemble
         return np.random.uniform(0.75, 0.98, num_samples)
+
+
+
 
     def compute_few_shot_learning(self, num_samples):
         # Logic to compute Few Shot Learning
         return np.random.uniform(0.65, 0.92, num_samples)
 
+
+
+
     def calculate_statistics(self, data):
-            self.stats = {}
-            for column in data.columns:
-                if column not in ['Id']:
-                    self.stats[column] = {
-                        'mean': np.mean(data[column]),
-                        'std': np.std(data[column]),
-                        'min': np.min(data[column]),
-                        'max': np.max(data[column])
-                    }
+        self.stats = {}
+        for column in data.columns:
+            if column not in ['Id']:
+                self.stats[column] = {
+                    'mean': np.mean(data[column]),
+                    'std': np.std(data[column]),
+                    'min': np.min(data[column]),
+                    'max': np.max(data[column])
+                }
+                
+                
+                
                     
     def update_table(self):
         results_to_table = []
@@ -268,6 +297,9 @@ class InferenceSection:
             results_to_table.append(get_stats)
         
         self.results_table.update_table(results_to_table)
+        
+        
+        
         
     def get_stats(self, name):
         if name in self.stats:
@@ -278,7 +310,7 @@ class InferenceSection:
             mean_formatted = "{:.3f}".format(mean)
             std_formatted = "{:.3f}".format(std)
             return [mean_formatted, std_formatted]
-            
+        
         else:
             return ["N/A", "N/A"]
 
@@ -310,8 +342,6 @@ class InferenceSection:
                         f.write(f"{stat}: {value:.2f}\n")
                 f.write("\n\nResults:\n")
             self.results_df.to_csv(file_path, mode='a', index=False)
-            
-            
-
+        
             # Update status message to indicate successful export
             self.comunication_section.display_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)
