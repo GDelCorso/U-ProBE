@@ -208,7 +208,7 @@ class InferenceSection:
             self.results_df['Trustscore'] = self.compute_trustscore(num_samples)
             
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(num_samples)
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model,dataloader)
             
         if self.options_state["Topological data analysis"]:
             self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(num_samples)
@@ -248,13 +248,38 @@ class InferenceSection:
 
 
 
-    def compute_mc_dropout(self, num_samples):
-        # Logic to compute MC-Dropout
-        return np.random.uniform(0.6, 0.95, num_samples)  
+    def compute_mc_dropout(self, model, dataloader, num_samples = 10):
+        
+        model.train()
+        inference_results = []
+        
+        for batch_features, _ in dataloader:
+            mean_prediction = self.monte_carlo_inference(model, batch_features, num_samples)
+            inference_results.extend(mean_prediction.numpy())
+        
+        return np.array(inference_results)
 
 
 
 
+    def monte_carlo_inference(self, model, input_data, num_samples):
+        model.train()
+                
+        predictions = []
+        with th.no_grad():
+            for _ in range(num_samples):
+                output = model(input_data)
+                predictions.append(output)
+    
+        # Stack predictions and calculate statistics
+        predictions = th.stack(predictions)
+        mean_prediction = th.mean(predictions, dim=0)
+                
+        return mean_prediction
+    
+    
+    
+    
     def compute_topological_data_analysis(self, num_samples):
         # Logic to compute Topological Data Analysis
         return np.random.uniform(0.7, 0.9, num_samples)
