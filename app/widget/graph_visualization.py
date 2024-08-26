@@ -9,7 +9,9 @@ class ImageDialog(ctk.CTkToplevel):
         super().__init__(master)
         self.title("Model Graph")
         
-        self.load_icon()
+        icon_path = os.path.join(os.path.dirname(__file__), "../../assets/icon.ico")
+        self.after(250, lambda: self.iconbitmap(icon_path))
+
         self.loaded_img = image
         self.max_width = 1920
         self.max_height = 1080
@@ -25,13 +27,6 @@ class ImageDialog(ctk.CTkToplevel):
         self.grab_set()
         self.minsize(400, 300)
 
-    def load_icon(self):
-        script_dir = os.path.dirname(__file__)
-        parent_dir = os.path.dirname(script_dir)
-        icon_path = os.path.join(parent_dir, "assets", "icon.ico")
-        
-        if os.path.isfile(icon_path):
-            self.iconbitmap(icon_path)
 
 
     def resize_image(self):

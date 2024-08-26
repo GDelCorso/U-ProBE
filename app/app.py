@@ -15,8 +15,9 @@ class App(ctk.CTk):
         self.geometry("1024x600")
 
         # Set application icon
-        icon_path = os.path.join(os.path.dirname(__file__), "assets/icon.ico")
+        icon_path = os.path.join(os.path.dirname(__file__), "../assets/icon.ico")
         self.iconbitmap(icon_path)
+        print(icon_path)
 
         # Configure the main grid layout
         self.grid_rowconfigure(0, weight=1)
