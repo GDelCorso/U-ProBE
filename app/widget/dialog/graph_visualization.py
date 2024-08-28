@@ -3,20 +3,26 @@ from PIL import Image
 import os
 import random
 from config import AppStyles as st
+import visualtorch
+import torch as th
 
 class ImageDialog(ctk.CTkToplevel):
-    def __init__(self, master, image, num_hidden_layers):
+    def __init__(self, master, model, hidden_layers):
+        
         super().__init__(master)
         self.title("Model Graph")
         
-        icon_path = os.path.join(os.path.dirname(__file__), "../../assets/icon.ico")
+        
+        icon_path = os.path.join(os.path.dirname(__file__), "../../../assets/icon.ico")
         self.after(250, lambda: self.iconbitmap(icon_path))
+        
 
+        image = visualtorch.graph_view(model, input_shape=(1, 3))
         self.loaded_img = image
         self.max_width = 1920
         self.max_height = 1080
-
-        self.num_hidden_layers = num_hidden_layers
+        
+        self.num_hidden_layers = len(hidden_layers)
         
         self.resize_image()
         self.create_widgets()
@@ -106,7 +112,9 @@ class ImageDialog(ctk.CTkToplevel):
         self.main_frame.grid_rowconfigure(3, weight=0)
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.checkbox_frame.grid_rowconfigure(0, weight=1)
-        self.checkbox_frame.grid_columnconfigure(tuple(range(self.num_hidden_layers)), weight=1)
+        if(self.num_hidden_layers > 0):
+            self.checkbox_frame.grid_columnconfigure(tuple(range(self.num_hidden_layers)), weight=1)
 
     def set_geometry(self):
         self.geometry(f"{min(self.loaded_img.width + 40, self.max_width)}x{min(self.loaded_img.height + 250, self.max_height)}")
+        
