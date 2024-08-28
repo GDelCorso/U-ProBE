@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from widget.import_widget import ImportSection
-from widget.plots_placeholder import PlotsPlaceholder
+from widget.plots_placeholder_widget import PlotsPlaceholder
 from widget.results_table_widget import ResultsTable
 from widget.inference_widget import InferenceSection
 from widget.comunication_widget import CommunicationSection
