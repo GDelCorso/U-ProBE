@@ -178,13 +178,13 @@ class ImportSection:
         if model_to_visualize == None:
             return
         
-        hidden_layers = self.get_hidden_layers(model_to_visualize)
+        layers = self.get_layers(model_to_visualize)
         
-        if hidden_layers == None:
+        if layers == None:
             self.comunication_section.display_message("No hidden layers found in the model", st.ERROR_COLOR)
             return
 
-        image_dialog = ImageDialog(self.master, model_to_visualize(), hidden_layers)
+        image_dialog = ImageDialog(self.master, model_to_visualize(), layers)
         image_dialog.mainloop()
         
         
@@ -212,7 +212,7 @@ class ImportSection:
             self.comunication_section.display_message(f"Error loading the ModelClass file: {e}", st.ERROR_COLOR)
                 
 
-    def get_hidden_layers(self, model_class):
+    def get_layers(self, model_class):
         try:
             if not callable(model_class):
                 raise ValueError("model_class must be a callable class")
@@ -221,7 +221,7 @@ class ImportSection:
             hidden_layers = []
 
             def extract_layers(module):
-                for child_name, child_module in module.named_children():
+                for _ , child_module in module.named_children():
                     if isinstance(child_module, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d)):
                         hidden_layers.append(child_module)
                     elif isinstance(child_module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
