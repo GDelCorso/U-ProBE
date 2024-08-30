@@ -28,11 +28,11 @@ class InferenceSection:
         # Main frame setup
         self.frame = ctk.CTkFrame(master)
         self.frame.grid_rowconfigure((0, 1, 2), weight=1)
-        self.frame.grid_columnconfigure((0, 1), weight=1, uniform="column")
+        self.frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="column")
 
         # Header label for post-hoc methods
         self.post_hoc_label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=st.HEADER_FONT)
-        self.post_hoc_label.grid(row=0, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="nsew")
+        self.post_hoc_label.grid(row=0, column=0, columnspan=3, padx=5, pady=(5, 5), sticky="nsew")
 
         # Create checkboxes for post-hoc methods
         self.create_inference_widgets()
@@ -42,9 +42,6 @@ class InferenceSection:
         
         # Initialize results dataframe
         self.results_df = None
-        
-
-
 
     def create_inference_widgets(self):
         # Dynamically create checkboxes based on options_state keys
@@ -52,7 +49,7 @@ class InferenceSection:
 
         # Create a frame for the checkboxes
         self.checkbox_frame = ctk.CTkFrame(self.frame)
-        self.checkbox_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=(5, 10), sticky="nsew")
+        self.checkbox_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=(5, 10), sticky="nsew")
 
         # Arrange checkboxes horizontally and centered
         num_columns = 3  # Maximum number of columns for checkboxes
@@ -70,13 +67,26 @@ class InferenceSection:
 
 
     def create_buttons_widgets(self):
+        # Frame per il batch size e il campo di input
+        self.batch_size_frame = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.batch_size_frame.grid(row=2, column=0, pady=5, padx=(20,10), sticky="ew")
+
+        # Label e campo di input per la batch size
+        self.batch_size_label = ctk.CTkLabel(self.batch_size_frame, text="Batch Size:", font=st.TEXT_FONT)
+        self.batch_size_label.grid(row=0, column=0, padx=5, sticky="ew")
+
+        self.batch_size_entry = ctk.CTkEntry(self.batch_size_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
+        self.batch_size_entry.grid(row=0, column=1, padx=5, sticky="ew")
+
         # Button to run inference
         self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.do_inference, font=st.BUTTON_FONT)
-        self.inference_button.grid(row=2, column=0, pady=5, padx=10, sticky="ew")
+        self.inference_button.grid(row=2, column=1, pady=5, padx=5, sticky="ew")
 
         # Button to export results
         self.export_button = ctk.CTkButton(self.frame, text="Export .csv", command=self.export_results, font=st.BUTTON_FONT)
-        self.export_button.grid(row=2, column=1, pady=5, padx=10, sticky="ew")
+        self.export_button.grid(row=2, column=2, pady=5, padx=5, sticky="ew")
+
+
 
 
 
@@ -91,6 +101,12 @@ class InferenceSection:
     def do_inference(self):
         # Clear previous messages
         self.comunication_section.display_message("", st.COMUNICATION_COLOR)
+
+        batch_size_text = self.batch_size_entry.get()
+        if not batch_size_text.isdigit() or int(batch_size_text) <= 0:
+            batch_size_text = "4"
+        
+        batch_size = int(batch_size_text)
 
         # Check if all required files are imported
         if not self.import_section.get_model_file() or not self.import_section.get_dataset_file() or not self.import_section.get_data_file():
@@ -148,7 +164,7 @@ class InferenceSection:
 
             # Initialize custom dataset and dataloader
             dataset = dataset_loader_imported(data)
-            dataloader = DataLoader(dataset, batch_size=4, shuffle=False)
+            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
             # Load the trained model
             model = th.jit.load(model_file)
@@ -186,7 +202,6 @@ class InferenceSection:
             )
 
         finally:
-            # Stop progress bar
             self.comunication_section.stop_progress()
             
             
