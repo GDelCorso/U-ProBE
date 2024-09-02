@@ -179,12 +179,13 @@ class ImportSection:
             return
         
         layers = self.get_layers(model_to_visualize)
+        model_sequence = self.destructure_model(model_to_visualize)
         
         if layers == None:
             self.comunication_section.display_message("No hidden layers found in the model", st.ERROR_COLOR)
             return
 
-        image_dialog = ImageDialog(self.master, model_to_visualize(), layers)
+        image_dialog = ImageDialog(self.master, model_to_visualize(), layers, model_sequence)
         image_dialog.mainloop()
         
         
@@ -232,3 +233,24 @@ class ImportSection:
         
         except Exception as e:
             self.comunication_section.display_message(f"Error getting hidden layers: {e}", st.ERROR_COLOR)
+
+    def destructure_model(self, model_class):
+        try:
+            if not callable(model_class):
+                raise ValueError("model_class must be a callable class")
+            
+            model = model_class()
+            model_sequence = []
+
+            def extract_layers(module):
+                for _ , child_module in module.named_children():
+                    if isinstance(child_module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
+                        extract_layers(child_module)
+                    else:
+                        model_sequence.append(child_module)
+            
+            extract_layers(model)
+            return model_sequence
+        
+        except Exception as e:
+            self.comunication_section.display_message(f"Error getting model sequence: {e}", st.ERROR_COLOR)
