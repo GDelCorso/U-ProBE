@@ -76,6 +76,7 @@ class ImportSection:
         self.dataset_file_path = None
         self.data_file_path = None
         self.model_class_path = None
+        self.dropout_checkboxes = None
 
     def select_model_file(self):
         filetypes = (
@@ -164,7 +165,13 @@ class ImportSection:
 
     def get_data_file(self):
         return self.data_file_path
-
+    
+    def set_dropout_checkboxes(self, checkboxes):
+        self.dropout_checkboxes = checkboxes
+        
+    def get_dropout_checkboxes(self):
+        return self.dropout_checkboxes
+        
     def visualize_model(self):
         
         if self.model_class_path == None:
@@ -185,11 +192,9 @@ class ImportSection:
             self.comunication_section.display_message("No hidden layers found in the model", st.ERROR_COLOR)
             return
 
-        image_dialog = ImageDialog(self.master, model_to_visualize(), layers, model_sequence)
+        image_dialog = ImageDialog(self.master, self, model_to_visualize(), layers, model_sequence)
         image_dialog.mainloop()
-        
-        
-        
+
             
     def validate_modelclass(self):
         try:
