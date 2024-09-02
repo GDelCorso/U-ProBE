@@ -67,7 +67,7 @@ class ImportSection:
         self.data_remove_button = ctk.CTkButton(self.file_frame, text="X", command=self.remove_data_file, width=10, height=10, corner_radius=10)
         self.data_remove_button.grid(row=3, column=2, padx=(0, 10), pady=5, sticky="e")
         
-        
+        # Button to visualize the neural network
         self.visualize_button = ctk.CTkButton(self.frame, text="Visualize Neural Network", font=st.BUTTON_FONT, command=self.visualize_model, corner_radius=10)
         self.visualize_button.grid(row=4, column=0, columnspan=2, padx=10, pady=(5,10), sticky="ew")
         
@@ -78,6 +78,7 @@ class ImportSection:
         self.model_class_path = None
         self.dropout_checkboxes = None
 
+    # Function to select the model file (.pth)
     def select_model_file(self):
         filetypes = (
             ('Model files', '*.pth'),
@@ -93,6 +94,7 @@ class ImportSection:
             self.model_path = filename
             self.model_file_label.configure(text=f"Model: {os.path.basename(filename)}", font=st.TEXT_FONT)
 
+    # Function to select the ModelClass file (.py)
     def select_modelclass_file(self):
         filetypes = (
             ('ModelClass files', '*.py'),
@@ -108,6 +110,7 @@ class ImportSection:
             self.model_class_path = filename
             self.model_class_file_label.configure(text=f"ModelClass: {os.path.basename(filename)}", font=st.TEXT_FONT)
 
+    # Function to import the dataset loader file (.py)
     def import_dataset(self):
         filetypes = (
             ('DataSet Loader files', '*.py'),
@@ -123,6 +126,7 @@ class ImportSection:
             self.dataset_file_path = filename
             self.dataset_file_label.configure(text=f"DataSet Loader: {os.path.basename(filename)}", font=st.TEXT_FONT)
 
+    # Function to import the data file (.csv)
     def import_datafile(self):
         filetypes = (
             ('Data Files', '*.csv'),
@@ -138,43 +142,54 @@ class ImportSection:
             self.data_file_path = filename
             self.data_file_label.configure(text=f"Data File: {os.path.basename(filename)}", font=st.TEXT_FONT)
     
+    # Function to remove the selected model file
     def remove_model_file(self):
         self.model_path = None
         self.model_file_label.configure(text="No Model selected", font=st.TEXT_FONT)
         
+    # Function to remove the selected ModelClass file
     def remove_model_class_file(self):
         self.model_class_path = None
         self.model_class_file_label.configure(text="No Model Class File selected", font=st.TEXT_FONT)
         
+    # Function to remove the selected dataset loader file
     def remove_dataset_file(self):
         self.dataset_file_path = None
         self.dataset_file_label.configure(text="No DataSet Loader selected", font=st.TEXT_FONT)
         
+    # Function to remove the selected data file
     def remove_data_file(self):
         self.data_file_path = None
         self.data_file_label.configure(text="No Data File selected", font=st.TEXT_FONT)
         
+    # Function to retrieve the selected model file path
     def get_model_file(self):
         return self.model_path
     
+    # Function to retrieve the selected ModelClass file path
     def get_modelclass_file(self):
         return self.model_class_path
 
+    # Function to retrieve the selected dataset loader file path
     def get_dataset_file(self):
         return self.dataset_file_path
 
+    # Function to retrieve the selected data file path
     def get_data_file(self):
         return self.data_file_path
     
+    # Function to set the dropout checkboxes
     def set_dropout_checkboxes(self, checkboxes):
         self.dropout_checkboxes = checkboxes
         
+    # Function to retrieve the dropout checkboxes
     def get_dropout_checkboxes(self):
         return self.dropout_checkboxes
         
+    # Function to visualize the neural network model
     def visualize_model(self):
         
-        if self.model_class_path == None:
+        if self.model_class_path is None:
             self.comunication_section.display_message("No ModelClass file selected", st.ERROR_COLOR)
             return
         
@@ -182,20 +197,20 @@ class ImportSection:
         
         model_to_visualize = self.validate_modelclass()
         
-        if model_to_visualize == None:
+        if model_to_visualize is None:
             return
         
         layers = self.get_layers(model_to_visualize)
         model_sequence = self.destructure_model(model_to_visualize)
         
-        if layers == None:
+        if layers is None:
             self.comunication_section.display_message("No hidden layers found in the model", st.ERROR_COLOR)
             return
 
         image_dialog = ImageDialog(self.master, self, model_to_visualize(), layers, model_sequence)
         image_dialog.mainloop()
 
-            
+    # Function to validate the ModelClass file
     def validate_modelclass(self):
         try:
             spec = importlib.util.spec_from_file_location("ModelClassModule", self.model_class_path)
@@ -218,6 +233,7 @@ class ImportSection:
             self.comunication_section.display_message(f"Error loading the ModelClass file: {e}", st.ERROR_COLOR)
                 
 
+    # Function to get the hidden layers of the model
     def get_layers(self, model_class):
         try:
             if not callable(model_class):
@@ -227,7 +243,7 @@ class ImportSection:
             hidden_layers = []
 
             def extract_layers(module):
-                for _ , child_module in module.named_children():
+                for _, child_module in module.named_children():
                     if isinstance(child_module, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d)):
                         hidden_layers.append(child_module)
                     elif isinstance(child_module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
@@ -239,6 +255,7 @@ class ImportSection:
         except Exception as e:
             self.comunication_section.display_message(f"Error getting hidden layers: {e}", st.ERROR_COLOR)
 
+    # Function to destructure the model into a sequence of layers
     def destructure_model(self, model_class):
         try:
             if not callable(model_class):
@@ -248,7 +265,7 @@ class ImportSection:
             model_sequence = []
 
             def extract_layers(module):
-                for _ , child_module in module.named_children():
+                for _, child_module in module.named_children():
                     if isinstance(child_module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
                         extract_layers(child_module)
                     else:
