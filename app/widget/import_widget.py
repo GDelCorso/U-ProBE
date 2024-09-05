@@ -93,6 +93,7 @@ class ImportSection:
         if filename:
             self.model_path = filename
             self.model_file_label.configure(text=f"Model: {os.path.basename(filename)}", font=st.TEXT_FONT)
+            self.comunication_section.display_message("Model file loaded successfully", st.COMUNICATION_COLOR)
 
     # Function to select the ModelClass file (.py)
     def select_modelclass_file(self):
@@ -107,8 +108,12 @@ class ImportSection:
         )
         
         if filename:
+            self.model_class = self.validate_modelclass(filename)
+            if self.model_class is None:
+                return
             self.model_class_path = filename
             self.model_class_file_label.configure(text=f"ModelClass: {os.path.basename(filename)}", font=st.TEXT_FONT)
+            self.comunication_section.display_message("ModelClass file loaded successfully", st.COMUNICATION_COLOR)
 
     # Function to import the dataset loader file (.py)
     def import_dataset(self):
@@ -123,8 +128,12 @@ class ImportSection:
         )
         
         if filename:
+            self.dataset_class=self.validate_dataset_loader(filename)
+            if self.dataset_class is None:
+                return
             self.dataset_file_path = filename
             self.dataset_file_label.configure(text=f"DataSet Loader: {os.path.basename(filename)}", font=st.TEXT_FONT)
+            self.comunication_section.display_message("DataSet Loader file loaded successfully", st.COMUNICATION_COLOR)
 
     # Function to import the data file (.csv)
     def import_datafile(self):
@@ -141,6 +150,7 @@ class ImportSection:
         if filename:
             self.data_file_path = filename
             self.data_file_label.configure(text=f"Data File: {os.path.basename(filename)}", font=st.TEXT_FONT)
+            self.comunication_section.display_message("Data file loaded successfully", st.COMUNICATION_COLOR)
     
     # Function to remove the selected model file
     def remove_model_file(self):
@@ -195,7 +205,7 @@ class ImportSection:
         
         self.comunication_section.display_message("Visualizing Neural Network", st.COMUNICATION_COLOR)
         
-        model_to_visualize = self.validate_modelclass(self.model_class_path)
+        model_to_visualize = self.model_class
         
         if model_to_visualize is None:
             return
@@ -231,7 +241,28 @@ class ImportSection:
         
         except Exception as e:
             self.comunication_section.display_message(f"Error loading the ModelClass file: {e}", st.ERROR_COLOR)
-                
+
+    def validate_dataset_loader(self, dataset_loader_file):
+        try:
+            # Import the Dataset class from the dataset file
+            spec = importlib.util.spec_from_file_location("DatasetModule", dataset_loader_file)
+            if spec is None:
+                self.comunication_section.display_message(f"Cannot find the file: {dataset_loader_file}", st.ERROR_COLOR)
+                return
+            dataset_module = importlib.util.module_from_spec(spec)
+            if spec.loader is None:
+                self.comunication_section.display_message(f"Cannot load the loader for the module: {dataset_loader_file}", st.ERROR_COLOR)
+                return 
+            spec.loader.exec_module(dataset_module)
+
+            # Check if CustomLoader class exists in the module
+            if not hasattr(dataset_module, 'CustomLoader'):
+                self.comunication_section.display_message(f"The file {dataset_loader_file} does not contain a CustomLoader class.", st.ERROR_COLOR)
+                return
+            
+            return dataset_module.CustomLoader
+        except Exception as e:
+            self.comunication_section.display_message(f"An error occurred while importing the dataset loader: {str(e)}", st.ERROR_COLOR)
 
     # Function to get the hidden layers of the model
     def get_layers(self, model_class):

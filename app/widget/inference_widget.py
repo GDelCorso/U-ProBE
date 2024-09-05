@@ -139,8 +139,8 @@ class InferenceSection:
             st.COMUNICATION_COLOR
         )
 
-        dataset_loader_imported = self.validate_dataset_loader(dataset_loader_file)
-        modelclass_imported = self.import_section.validate_modelclass(modelclass_file)
+        dataset_loader_imported = self.import_section.dataset_class
+        modelclass_imported = self.import_section.model_class
         
         if not dataset_loader_imported or not modelclass_imported:
             self.comunication_section.stop_progress()
@@ -165,32 +165,6 @@ class InferenceSection:
             st.COMUNICATION_COLOR
         )
         self.comunication_section.stop_progress()
-            
-    def validate_dataset_loader(self, dataset_loader_file):
-        try:
-            # Import the Dataset class from the dataset file
-            spec = importlib.util.spec_from_file_location("DatasetModule", dataset_loader_file)
-            if spec is None:
-                self.comunication_section.display_message(f"Cannot find the file: {dataset_loader_file}", st.ERROR_COLOR)
-                self.comunication_section.stop_progress()
-                return
-            dataset_module = importlib.util.module_from_spec(spec)
-            if spec.loader is None:
-                self.comunication_section.display_message(f"Cannot load the loader for the module: {dataset_loader_file}", st.ERROR_COLOR)
-                self.comunication_section.stop_progress()
-                return 
-            spec.loader.exec_module(dataset_module)
-
-            # Check if CustomLoader class exists in the module
-            if not hasattr(dataset_module, 'CustomLoader'):
-                self.comunication_section.display_message(f"The file {dataset_loader_file} does not contain a CustomLoader class.", st.ERROR_COLOR)
-                self.comunication_section.stop_progress()
-                return
-            
-            return dataset_module.CustomLoader
-        except Exception as e:
-            self.comunication_section.display_message(f"An error occurred while importing the dataset loader: {str(e)}", st.ERROR_COLOR)
-            self.comunication_section.stop_progress()
         
             
             
@@ -417,7 +391,7 @@ class InferenceSection:
         if file_path:            
         
             with open(file_path, 'w') as f:
-                f.write("\n\nStatistics:\n")
+                f.write("Statistics:\n")
                 for column, column_stats in self.stats.items():
                     f.write(f"\n{column}:\n")
                     for stat, value in column_stats.items():
