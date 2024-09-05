@@ -195,7 +195,7 @@ class ImportSection:
         
         self.comunication_section.display_message("Visualizing Neural Network", st.COMUNICATION_COLOR)
         
-        model_to_visualize = self.validate_modelclass()
+        model_to_visualize = self.validate_modelclass(self.model_class_path)
         
         if model_to_visualize is None:
             return
@@ -211,20 +211,20 @@ class ImportSection:
         image_dialog.mainloop()
 
     # Function to validate the ModelClass file
-    def validate_modelclass(self):
+    def validate_modelclass(self, model_class_path):
         try:
-            spec = importlib.util.spec_from_file_location("ModelClassModule", self.model_class_path)
+            spec = importlib.util.spec_from_file_location("ModelClassModule", model_class_path)
             if spec is None:
-                self.comunication_section.display_message(f"Cannot find the file: {self.model_class_path}", st.ERROR_COLOR)
+                self.comunication_section.display_message(f"Cannot find the file: {model_class_path}", st.ERROR_COLOR)
                 return
             modelclass_module = importlib.util.module_from_spec(spec)
             if spec.loader is None:
-                self.comunication_section.display_message(f"Cannot load the loader for the module: {self.model_class_path}", st.ERROR_COLOR)
+                self.comunication_section.display_message(f"Cannot load the loader for the module: {model_class_path}", st.ERROR_COLOR)
                 return
             spec.loader.exec_module(modelclass_module)
             
             if not hasattr(modelclass_module, "CustomModel"):
-                self.comunication_section.display_message(f"CustomModel not found in the file: {self.model_class_path}", st.ERROR_COLOR)
+                self.comunication_section.display_message(f"CustomModel not found in the file: {model_class_path}", st.ERROR_COLOR)
                 return
             
             return modelclass_module.CustomModel
