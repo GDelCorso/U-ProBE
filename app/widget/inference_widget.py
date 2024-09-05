@@ -7,6 +7,7 @@ import importlib.util
 import torch as th
 from torch.utils.data import DataLoader
 import numpy as np
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, mean_squared_error, mean_absolute_error, r2_score
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
@@ -107,140 +108,157 @@ class InferenceSection:
             batch_size_text = "4"
         
         batch_size = int(batch_size_text)
-
-        # Check if all required files are imported
-        if not self.import_section.get_model_file() or not self.import_section.get_dataset_file() or not self.import_section.get_data_file():
-            self.comunication_section.display_message("Please ensure all required files are imported before running inference.", st.ERROR_COLOR)
-            return
-
-        # Check if at least one checkbox is selected
-        if not any(self.options_state.values()):
-            self.comunication_section.display_message(
-                "Please select at least one post-hoc method before running inference.",
-                st.ERROR_COLOR
-            )
-            return
-
-        # Retrieve imported files
+        
+         # Retrieve imported files
         model_file = self.import_section.get_model_file()
+        modelclass_file = self.import_section.get_modelclass_file()
         dataset_loader_file = self.import_section.get_dataset_file()
         data_file = self.import_section.get_data_file()
 
-        if not model_file or not dataset_loader_file or not data_file:
+        if not model_file or not modelclass_file or not dataset_loader_file or not data_file:
             self.comunication_section.display_message(
                 "Please ensure all required files are imported before running inference.",
                 st.ERROR_COLOR
             )
             return
 
+
+        # Check if at least one checkbox is selected
+        if not any(self.options_state.values()):
+            self.comunication_section.display_message(
+                "Please select at least one method before running inference.",
+                st.ERROR_COLOR
+            )
+            return
+
         # Start progress indication
         self.comunication_section.start_progress()
+        
         self.comunication_section.display_message(
             "Inference in progress... Please wait.",
             st.COMUNICATION_COLOR
         )
 
+        dataset_loader_imported = self.validate_dataset_loader(dataset_loader_file)
+        modelclass_imported = self.import_section.validate_modelclass(modelclass_file)
+        
+        if not dataset_loader_imported or not modelclass_imported:
+            self.comunication_section.stop_progress()
+            return
+        
+        # Load the dataset from the CSV file
+        data = pd.read_csv(data_file)
+
+        # Initialize custom dataset and dataloader
+        dataset = dataset_loader_imported(data)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+
+        state_dict = th.load(model_file)
+        model = modelclass_imported()
+        model.load_state_dict(state_dict)
+
+        self.run_inference(model, dataloader, data_file)
+
+        # Update status message to indicate successful completion
+        self.comunication_section.display_message(
+            "Inference completed successfully. Results have been generated.",
+            st.COMUNICATION_COLOR
+        )
+        self.comunication_section.stop_progress()
+            
+    def validate_dataset_loader(self, dataset_loader_file):
         try:
             # Import the Dataset class from the dataset file
             spec = importlib.util.spec_from_file_location("DatasetModule", dataset_loader_file)
             if spec is None:
                 self.comunication_section.display_message(f"Cannot find the file: {dataset_loader_file}", st.ERROR_COLOR)
+                self.comunication_section.stop_progress()
                 return
             dataset_module = importlib.util.module_from_spec(spec)
             if spec.loader is None:
                 self.comunication_section.display_message(f"Cannot load the loader for the module: {dataset_loader_file}", st.ERROR_COLOR)
-                return
+                self.comunication_section.stop_progress()
+                return 
             spec.loader.exec_module(dataset_module)
 
             # Check if CustomLoader class exists in the module
             if not hasattr(dataset_module, 'CustomLoader'):
                 self.comunication_section.display_message(f"The file {dataset_loader_file} does not contain a CustomLoader class.", st.ERROR_COLOR)
+                self.comunication_section.stop_progress()
                 return
             
-            dataset_loader_imported = dataset_module.CustomLoader
-
-            # Load the dataset from the CSV file
-            data = pd.read_csv(data_file)
-
-            # Initialize custom dataset and dataloader
-            dataset = dataset_loader_imported(data)
-            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-
-            # Load the trained model
-            model = th.jit.load(model_file)
-
-            self.run_inference(model, dataloader, data_file)
-
-            # Update status message to indicate successful completion
-            self.comunication_section.display_message(
-                "Inference completed successfully. Results have been generated.",
-                st.COMUNICATION_COLOR
-            )
-            
-        except ImportError as e:
-            self.comunication_section.display_message(
-                f"Import Error: {e}",
-                st.ERROR_COLOR
-            )
-
-        except FileNotFoundError as e:
-            self.comunication_section.display_message(
-                f"File Not Found: {e}",
-                st.ERROR_COLOR
-            )
-
-        except pd.errors.EmptyDataError as e:
-            self.comunication_section.display_message(
-                "Dataset file is empty or cannot be read.",
-                st.ERROR_COLOR
-            )
-
+            return dataset_module.CustomLoader
         except Exception as e:
-            self.comunication_section.display_message(
-                f"An unexpected error occurred: {e}",
-                st.ERROR_COLOR
-            )
-
-        finally:
+            self.comunication_section.display_message(f"An error occurred while importing the dataset loader: {str(e)}", st.ERROR_COLOR)
             self.comunication_section.stop_progress()
-            
-            
+        
             
             
     def run_inference(self, model, dataloader, data_file):
         original_data = pd.read_csv(data_file)
         
-        # Generate fictitious results
-        num_samples = len(original_data)
-        
+        # Inizializza il DataFrame dei risultati con l'Id
         self.results_df = pd.DataFrame({"Id": original_data['id']})
         
-        # Add selected post-hoc methods with fictitious results
+        # Esegui l'inferenza per il metodo "No post-hoc" se selezionato
         if self.options_state["No post-hoc method"]:
             self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
-            
+        
+        # Esegui l'inferenza per gli altri metodi post-hoc selezionati
         if self.options_state["Trustscore"]:
-            self.results_df['Trustscore'] = self.compute_trustscore(num_samples)
+            self.results_df['Trustscore'] = self.compute_trustscore(len(original_data))
             
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model,dataloader)
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader)
             
         if self.options_state["Topological data analysis"]:
-            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(num_samples)
+            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(len(original_data))
             
         if self.options_state["Ensemble"]:
-            self.results_df['Ensemble'] = self.compute_ensemble(num_samples)
+            self.results_df['Ensemble'] = self.compute_ensemble(len(original_data))
             
         if self.options_state["Few shot learning"]:
-            self.results_df['Few shot learning'] = self.compute_few_shot_learning(num_samples)
-            
-        self.calculate_statistics(self.results_df)
-        
-        self.update_table()
-        
-        
-        
-        
+            self.results_df['Few shot learning'] = self.compute_few_shot_learning(len(original_data))
+                
+        # Aggiungi la colonna con i valori o le etichette attese e calcola le statistiche
+        if self.is_pytorch_classifier(model, dataloader):
+            self.results_df.insert(1, 'GT', original_data['label'])
+            self.result_type = 'classification'
+            for column in self.results_df.columns:
+                if column not in ['Id', 'GT']:
+                    self.calculate_statistics_classifier(self.results_df)
+            self.update_table()
+        elif self.is_pytorch_regressor(model, dataloader):
+            self.results_df.insert(1, 'GT', original_data['value'])
+            self.result_type = 'regression'
+            for column in self.results_df.columns:
+                if column not in ['Id', 'GT']:
+                    self.calculate_statistics_regressor(self.results_df)
+            self.update_table()
+
+
+    def is_pytorch_classifier(self, model, dataloader):
+        model.eval()
+        with th.no_grad():
+            for batch_features, _ in dataloader:
+                output = model(batch_features)
+                # Se l'output ha più di una dimensione nel secondo asse, è un classificatore
+                if output.shape[1] > 1:
+                    return True
+                else:
+                    return False
+
+    def is_pytorch_regressor(self,model, dataloader):
+        model.eval()
+        with th.no_grad():
+            for batch_features, _ in dataloader:
+                output = model(batch_features)  
+                # Se l'output ha una sola dimensione nel secondo asse, è un regressore
+                if output.shape[1] == 1:
+                    return True
+                else:
+                    return False
+    
     def compute_no_post_hoc_method(self, model, dataloader):
         model.eval()
         inference_results = []
@@ -315,44 +333,68 @@ class InferenceSection:
 
 
 
-
-    def calculate_statistics(self, data):
+                
+    def calculate_statistics_classifier(self, data):
         self.stats = {}
+        
+        ground_truth = data['GT']
+        
         for column in data.columns:
-            if column not in ['Id']:
+            if column not in ['Id','GT']:
                 self.stats[column] = {
-                    'mean': np.mean(data[column]),
-                    'std': np.std(data[column]),
-                    'min': np.min(data[column]),
-                    'max': np.max(data[column])
+                    'accuracy' : accuracy_score(ground_truth, data[column]),
+                    'precision' : precision_score(ground_truth, data[column], average='weighted'),
+                    'recall' : recall_score(ground_truth, data[column], average='weighted'),
+                    'f1_score' : f1_score(ground_truth, data[column], average='weighted'),
+                    'confusion_matrix' : confusion_matrix(ground_truth, data[column]).tolist(),
                 }
-                
-                
-                
-                    
+    
+    def calculate_statistics_regressor(self, data):
+        self.stats = {}
+        
+        ground_truth = data['GT']
+        
+        for column in data.columns:
+            if column not in ['Id','GT']:
+                self.stats[column] = {
+                    'mean_squared_error': mean_squared_error(ground_truth, data[column]),
+                    'mean_absolute_error': mean_absolute_error(ground_truth, data[column]),
+                    'r2_score' : r2_score(ground_truth, data[column]),
+                    'median_absolute_error' : np.median(np.abs(ground_truth - data[column])),
+                    'max_error': np.max(np.abs(ground_truth - data[column])),
+                }
+    
+
+                  
     def update_table(self):
         results_to_table = []
         for method in self.options:
             get_stats = self.get_stats(method)
             results_to_table.append(get_stats)
         
-        self.results_table.update_table(results_to_table)
+        self.results_table.update_table(results_to_table, self.result_type)
         
         
         
         
-    def get_stats(self, name):
-        if name in self.stats:
-            mean = self.stats[name]['mean']
-            std = self.stats[name]['std']
-    
-            # Formattare i numeri a 3 decimali
-            mean_formatted = "{:.3f}".format(mean)
-            std_formatted = "{:.3f}".format(std)
-            return [mean_formatted, std_formatted]
+    def get_stats(self, method):
+        if method in self.stats:
+            method_stats = self.stats[method]
+            
+            if 'accuracy' in method_stats:
+                # Classificatore: restituisce accuratezza e F1-score
+                accuracy = method_stats['accuracy']
+                f1_score = method_stats['f1_score']
+                return [f"{accuracy:.3f}", f"{f1_score:.3f}"]
+
+            elif 'mean_squared_error' in method_stats:
+                # Regressore: restituisce R² score e Mean Squared Error (MSE)
+                r2_score = method_stats['r2_score']
+                mse = method_stats['mean_squared_error']
+                return [f"{r2_score:.3f}", f"{mse:.3f}"]
         
-        else:
-            return ["N/A", "N/A"]
+        # Se il metodo non esiste o non contiene le metriche cercate
+        return ["N/A", "N/A"]
 
         
        # self.results_table.update_results(results_to_table)
