@@ -144,13 +144,13 @@ class ImageDialog(ctk.CTkToplevel):
             if self.is_convolutional(self.hidden_layers[i]):
                 checkbox = ctk.CTkCheckBox(
                     layer_frame,
-                    text=f"Hidden Layer {i + 1}:\n   {self.hidden_layers[i].__class__.__name__}\n  Input: {self.hidden_layers[i].in_channels} Output: {self.hidden_layers[i].out_channels}",
+                    text=f"Layer {i + 2}:\n   {self.hidden_layers[i].__class__.__name__}\n  Input: {self.hidden_layers[i].in_channels} Output: {self.hidden_layers[i].out_channels}",
                     font=st.TEXT_FONT
                 )
             else:
                 checkbox = ctk.CTkCheckBox(
                     layer_frame,
-                    text=f"Hidden Layer {i + 1}:\n   {self.hidden_layers[i].__class__.__name__}\n   Input: {self.hidden_layers[i].in_features} Output: {self.hidden_layers[i].out_features}",
+                    text=f"Layer {i + 2}:\n   {self.hidden_layers[i].__class__.__name__}\n   Input: {self.hidden_layers[i].in_features} Output: {self.hidden_layers[i].out_features}",
                     font=st.TEXT_FONT
                 )
 
