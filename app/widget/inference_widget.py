@@ -183,7 +183,7 @@ class InferenceSection:
             self.results_df['Trustscore'] = self.compute_trustscore(len(original_data))
             
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader)
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(len(original_data))
             
         if self.options_state["Topological data analysis"]:
             self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(len(original_data))
@@ -194,44 +194,15 @@ class InferenceSection:
         if self.options_state["Few shot learning"]:
             self.results_df['Few shot learning'] = self.compute_few_shot_learning(len(original_data))
                 
-        # Aggiungi la colonna con i valori o le etichette attese e calcola le statistiche
-        if self.is_pytorch_classifier(model, dataloader):
-            self.results_df.insert(1, 'GT', original_data['label'])
-            self.result_type = 'classification'
-            for column in self.results_df.columns:
-                if column not in ['Id', 'GT']:
-                    self.calculate_statistics_classifier(self.results_df)
-            self.update_table()
-        elif self.is_pytorch_regressor(model, dataloader):
-            self.results_df.insert(1, 'GT', original_data['value'])
-            self.result_type = 'regression'
-            for column in self.results_df.columns:
-                if column not in ['Id', 'GT']:
-                    self.calculate_statistics_regressor(self.results_df)
-            self.update_table()
+
+        self.results_df.insert(1, 'GT', original_data['label'])
+        self.result_type = 'classification'
+        for column in self.results_df.columns:
+            if column not in ['Id', 'GT']:
+                self.calculate_statistics(self.results_df)
+        self.update_table()
 
 
-    def is_pytorch_classifier(self, model, dataloader):
-        model.eval()
-        with th.no_grad():
-            for batch_features, _ in dataloader:
-                output = model(batch_features)
-                # Se l'output ha più di una dimensione nel secondo asse, è un classificatore
-                if output.shape[1] > 1:
-                    return True
-                else:
-                    return False
-
-    def is_pytorch_regressor(self,model, dataloader):
-        model.eval()
-        with th.no_grad():
-            for batch_features, _ in dataloader:
-                output = model(batch_features)  
-                # Se l'output ha una sola dimensione nel secondo asse, è un regressore
-                if output.shape[1] == 1:
-                    return True
-                else:
-                    return False
     
     def compute_no_post_hoc_method(self, model, dataloader):
         model.eval()
@@ -241,7 +212,7 @@ class InferenceSection:
         with th.no_grad():
             for batch_features, _ in dataloader:
                 outputs = model(batch_features)
-                inference_results.extend(outputs.numpy())
+                inference_results.extend(np.argmax(outputs, axis=1))
     
         return np.array(inference_results)
         
@@ -250,96 +221,57 @@ class InferenceSection:
 
     def compute_trustscore(self, num_samples):
         # Logic to compute Trustscore
-        return np.random.uniform(0.5, 1.0, num_samples) 
+        return np.random.randint(0, 10, num_samples)
 
 
 
 
-    def compute_mc_dropout(self, model, dataloader, num_samples = 10):
+    def compute_mc_dropout(self, num_samples):
         
-        model.train()
-        inference_results = []
-        
-        for batch_features, _ in dataloader:
-            mean_prediction = self.monte_carlo_inference(model, batch_features, num_samples)
-            inference_results.extend(mean_prediction.numpy())
-        
-        return np.array(inference_results)
+        return np.random.randint(0, 10, num_samples)
 
-
-
-
-    def monte_carlo_inference(self, model, input_data, num_samples):
-        model.train()
-                
-        predictions = []
-        with th.no_grad():
-            for _ in range(num_samples):
-                output = model(input_data)
-                predictions.append(output)
-    
-        # Stack predictions and calculate statistics
-        predictions = th.stack(predictions)
-        mean_prediction = th.mean(predictions, dim=0)
-                
-        return mean_prediction
     
     
     
     
     def compute_topological_data_analysis(self, num_samples):
         # Logic to compute Topological Data Analysis
-        return np.random.uniform(0.7, 0.9, num_samples)
+        return np.random.randint(0, 10, num_samples)
 
 
 
 
     def compute_ensemble(self, num_samples):
         # Logic to compute Ensemble
-        return np.random.uniform(0.75, 0.98, num_samples)
+        return np.random.randint(0, 10, num_samples)
 
 
 
 
     def compute_few_shot_learning(self, num_samples):
         # Logic to compute Few Shot Learning
-        return np.random.uniform(0.65, 0.92, num_samples)
+        return np.random.randint(0, 10, num_samples)
 
 
 
                 
-    def calculate_statistics_classifier(self, data):
+    def calculate_statistics(self, data):
         self.stats = {}
         
         ground_truth = data['GT']
         
         for column in data.columns:
             if column not in ['Id','GT']:
+                data_column = data[column]
                 self.stats[column] = {
-                    'accuracy' : accuracy_score(ground_truth, data[column]),
-                    'precision' : precision_score(ground_truth, data[column], average='weighted'),
-                    'recall' : recall_score(ground_truth, data[column], average='weighted'),
-                    'f1_score' : f1_score(ground_truth, data[column], average='weighted'),
-                    'confusion_matrix' : confusion_matrix(ground_truth, data[column]).tolist(),
+                    'accuracy' : accuracy_score(data_column, ground_truth),
+                    'precision' : precision_score(data_column, ground_truth, average='weighted'),
+                    'recall' :  recall_score(data_column, ground_truth, average='weighted'),
+                    'f1_score' :  f1_score(data_column, ground_truth, average='weighted'),
                 }
-    
-    def calculate_statistics_regressor(self, data):
-        self.stats = {}
-        
-        ground_truth = data['GT']
-        
-        for column in data.columns:
-            if column not in ['Id','GT']:
-                self.stats[column] = {
-                    'mean_squared_error': mean_squared_error(ground_truth, data[column]),
-                    'mean_absolute_error': mean_absolute_error(ground_truth, data[column]),
-                    'r2_score' : r2_score(ground_truth, data[column]),
-                    'median_absolute_error' : np.median(np.abs(ground_truth - data[column])),
-                    'max_error': np.max(np.abs(ground_truth - data[column])),
-                }
-    
 
-                  
+
+
     def update_table(self):
         results_to_table = []
         for method in self.options:
@@ -355,23 +287,15 @@ class InferenceSection:
         if method in self.stats:
             method_stats = self.stats[method]
             
-            if 'accuracy' in method_stats:
-                # Classificatore: restituisce accuratezza e F1-score
-                accuracy = method_stats['accuracy']
-                f1_score = method_stats['f1_score']
-                return [f"{accuracy:.3f}", f"{f1_score:.3f}"]
-
-            elif 'mean_squared_error' in method_stats:
-                # Regressore: restituisce R² score e Mean Squared Error (MSE)
-                r2_score = method_stats['r2_score']
-                mse = method_stats['mean_squared_error']
-                return [f"{r2_score:.3f}", f"{mse:.3f}"]
+            # Classificatore: restituisce accuratezza e F1-score
+            accuracy = method_stats['accuracy']
+            f1_score = method_stats['f1_score']
+            return [f"{accuracy:.3f}", f"{f1_score:.3f}"]
         
         # Se il metodo non esiste o non contiene le metriche cercate
         return ["N/A", "N/A"]
 
         
-       # self.results_table.update_results(results_to_table)
     def export_results(self):
         # Clear previous messages
         self.comunication_section.display_message("", st.COMUNICATION_COLOR)
@@ -379,8 +303,8 @@ class InferenceSection:
         if self.results_df is None or self.results_df.empty:
             self.comunication_section.display_message("No inference results to export.", st.ERROR_COLOR)
             return
-        
-        # Prompt the user to select a file path for saving the .csv file
+
+        # Prompt the user to select a file path for saving the .csv files
         file_path = fd.asksaveasfilename(
             title='Save as',
             defaultextension='.csv',
@@ -388,16 +312,34 @@ class InferenceSection:
             initialfile='results.csv'
         )
         
-        if file_path:            
-        
-            with open(file_path, 'w') as f:
-                f.write("Statistics:\n")
-                for column, column_stats in self.stats.items():
-                    f.write(f"\n{column}:\n")
-                    for stat, value in column_stats.items():
-                        f.write(f"{stat}: {value:.2f}\n")
-                f.write("\n\nResults:\n")
-            self.results_df.to_csv(file_path, mode='a', index=False)
-        
+        if file_path:
+            # Split the file path into directory and base file name
+            base_path, ext = os.path.splitext(file_path)
+            
+            # Define paths for statistics and inference results
+            stats_file_path = base_path + "_stats" + ext
+            results_file_path = base_path + "_inferences" + ext
+            
+            # Save statistics to the stats file in the requested format
+            with open(stats_file_path, 'w') as f:
+                # Write the header for the methods
+                methods = list(self.stats.keys())
+                f.write("metric," + ",".join(methods) + "\n")
+                
+                # Write each metric as a row
+                metrics = ['accuracy', 'precision', 'recall', 'f1_score']
+                for metric in metrics:
+                    f.write(f"{metric}")
+                    for method in methods:
+                        f.write(f",{self.stats[method][metric]:.2f}")
+                    f.write("\n")
+            
+            # Save inference results to the results file
+            self.results_df.to_csv(results_file_path, index=False)
+            
             # Update status message to indicate successful export
-            self.comunication_section.display_message(f"CSV file exported to {os.path.basename(file_path)}", st.COMUNICATION_COLOR)
+            self.comunication_section.display_message(
+                f"CSV files exported: {os.path.basename(stats_file_path)} and {os.path.basename(results_file_path)}", 
+                st.COMUNICATION_COLOR
+            )
+
