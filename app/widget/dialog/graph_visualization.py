@@ -2,7 +2,6 @@ from collections import defaultdict
 import customtkinter as ctk
 from PIL import Image
 import os
-import random
 from config import AppStyles as st
 import visualtorch
 from torch import nn
@@ -123,7 +122,10 @@ class ImageDialog(ctk.CTkToplevel):
         for c in range(max_columns):
             self.checkbox_frame.grid_columnconfigure(c, weight=1)
 
+        # Remove input layer from model sequence
         aux_model_layers = self.model_sequence[1:]
+        
+        # Remove all layers before the first hidden layer
         while aux_model_layers and str(aux_model_layers[0]) != str(self.hidden_layers[0]):
             aux_model_layers = aux_model_layers[1:]
 
@@ -174,8 +176,9 @@ class ImageDialog(ctk.CTkToplevel):
                 dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
                 self.checkboxes_dict[i + 1] = False
 
-            while aux_model_layers and str(aux_model_layers[0]) != str(self.hidden_layers[i + 1]):
-                aux_model_layers = aux_model_layers[1:]
+            if  self.num_hidden_layers > i + 1:
+                while aux_model_layers and str(aux_model_layers[0]) != str(self.hidden_layers[i + 1]):
+                    aux_model_layers = aux_model_layers[1:]
 
             self.checkboxes.append(checkbox)
 

@@ -271,17 +271,17 @@ class ImportSection:
                 raise ValueError("model_class must be a callable class")
             
             model = model_class()
-            hidden_layers = []
+            layers = []
 
             def extract_layers(module):
                 for _, child_module in module.named_children():
                     if isinstance(child_module, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d)):
-                        hidden_layers.append(child_module)
+                        layers.append(child_module)
                     elif isinstance(child_module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
                         extract_layers(child_module)
             
             extract_layers(model)
-            return hidden_layers
+            return layers
         
         except Exception as e:
             self.comunication_section.display_message(f"Error getting hidden layers: {e}", st.ERROR_COLOR)
