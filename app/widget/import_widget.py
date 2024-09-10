@@ -68,7 +68,7 @@ class ImportSection:
         self.data_remove_button.grid(row=3, column=2, padx=(0, 10), pady=5, sticky="e")
         
         # Button to visualize the neural network
-        self.visualize_button = ctk.CTkButton(self.frame, text="Visualize Neural Network", font=st.BUTTON_FONT, command=self.visualize_model, corner_radius=10)
+        self.visualize_button = ctk.CTkButton(self.frame, text="Visualize Neural Network & Set Dropout Layers", font=st.BUTTON_FONT, command=self.visualize_model, corner_radius=10)
         self.visualize_button.grid(row=4, column=0, columnspan=2, padx=10, pady=(5,10), sticky="ew")
         
         # File path variables for storing selected file paths

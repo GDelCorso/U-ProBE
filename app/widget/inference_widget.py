@@ -3,17 +3,17 @@ from tkinter import filedialog as fd
 import pandas as pd
 import os
 from config import AppStyles as st
-import importlib.util
 import torch as th
+from torch import nn
 from torch.utils.data import DataLoader
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
         self.master = master
         self.import_section = import_section
-        self.results_table = results_table 
+        self.results_table = results_table
         self.comunication_section = comunication_section
 
         # Variables to store the state of checkboxes
@@ -40,7 +40,7 @@ class InferenceSection:
 
         # Create widgets for export options
         self.create_buttons_widgets()
-        
+
         # Initialize results dataframe
         self.results_df = None
 
@@ -106,9 +106,9 @@ class InferenceSection:
         batch_size_text = self.batch_size_entry.get()
         if not batch_size_text.isdigit() or int(batch_size_text) <= 0:
             batch_size_text = "4"
-        
+
         batch_size = int(batch_size_text)
-        
+
          # Retrieve imported files
         model_file = self.import_section.get_model_file()
         modelclass_file = self.import_section.get_modelclass_file()
@@ -133,7 +133,7 @@ class InferenceSection:
 
         # Start progress indication
         self.comunication_section.start_progress()
-        
+
         self.comunication_section.display_message(
             "Inference in progress... Please wait.",
             st.COMUNICATION_COLOR
@@ -141,11 +141,11 @@ class InferenceSection:
 
         dataset_loader_imported = self.import_section.dataset_class
         modelclass_imported = self.import_section.model_class
-        
+
         if not dataset_loader_imported or not modelclass_imported:
             self.comunication_section.stop_progress()
             return
-        
+
         # Load the dataset from the CSV file
         data = pd.read_csv(data_file)
 
@@ -165,35 +165,35 @@ class InferenceSection:
             st.COMUNICATION_COLOR
         )
         self.comunication_section.stop_progress()
-        
-            
-            
+
+
+
     def run_inference(self, model, dataloader, data_file):
         original_data = pd.read_csv(data_file)
-        
+
         # Inizializza il DataFrame dei risultati con l'Id
         self.results_df = pd.DataFrame({"Id": original_data['id']})
-        
+
         # Esegui l'inferenza per il metodo "No post-hoc" se selezionato
         if self.options_state["No post-hoc method"]:
             self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
-        
+
         # Esegui l'inferenza per gli altri metodi post-hoc selezionati
         if self.options_state["Trustscore"]:
             self.results_df['Trustscore'] = self.compute_trustscore(len(original_data))
-            
+
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(len(original_data))
-            
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(original_data))
+
         if self.options_state["Topological data analysis"]:
             self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(len(original_data))
-            
+
         if self.options_state["Ensemble"]:
             self.results_df['Ensemble'] = self.compute_ensemble(len(original_data))
-            
+
         if self.options_state["Few shot learning"]:
             self.results_df['Few shot learning'] = self.compute_few_shot_learning(len(original_data))
-                
+
 
         self.results_df.insert(1, 'GT', original_data['label'])
         self.result_type = 'classification'
@@ -203,7 +203,7 @@ class InferenceSection:
         self.update_table()
 
 
-    
+
     def compute_no_post_hoc_method(self, model, dataloader):
         model.eval()
         inference_results = []
@@ -213,27 +213,62 @@ class InferenceSection:
             for batch_features, _ in dataloader:
                 outputs = model(batch_features)
                 inference_results.extend(np.argmax(outputs, axis=1))
-    
+
         return np.array(inference_results)
-        
-        
-        
+
+
+
 
     def compute_trustscore(self, num_samples):
         # Logic to compute Trustscore
         return np.random.randint(0, 10, num_samples)
 
+    def compute_mc_dropout(self, model, dataloader, num_samples, forward_passes=200, n_classes=10):
 
 
+        # Array per salvare le predizioni dropout
+        dropout_predictions = np.empty((forward_passes, num_samples, n_classes))
+        softmax = nn.Softmax(dim=1)
+        checkboxes = self.import_section.get_dropout_checkboxes()
+        # if checkboxes is None: 
+            # Itera per il numero di forward_passes richiesto
+        for fp in range(forward_passes):
+            predictions = np.empty((0, n_classes))
 
-    def compute_mc_dropout(self, num_samples):
-        
-        return np.random.randint(0, 10, num_samples)
+            model.eval()
+            self.enable_training_dropout(model)  # Abilita dropout anche in modalità eval
 
-    
-    
-    
-    
+            # Esegui l'inferenza sui batch
+            for i, (images, _) in enumerate(dataloader):
+                images = images.to(th.device('cuda' if th.cuda.is_available() else 'cpu'))
+
+                with th.no_grad():
+                    outputs = model(images)
+                    outputs = softmax(outputs)  # Applica softmax per ottenere probabilità
+
+                # Aggiungi le predizioni al batch corrente
+                predictions = np.vstack((predictions, outputs.cpu().numpy()))
+
+            # Salva le predizioni per il forward pass corrente
+            dropout_predictions[fp] = predictions
+
+        # Calcola la media delle predizioni su tutti i forward pass
+        mean_predictions = np.mean(dropout_predictions, axis=0)
+
+        # Ritorna le predizioni finali (classe con probabilità massima)
+        final_predictions = np.argmax(mean_predictions, axis=1)
+
+        return final_predictions
+        # else:
+        #     return np.random.randint(0, 10, num_samples)
+
+
+    def enable_training_dropout(self, model):
+        for m in model.modules():
+            if isinstance(m, nn.Dropout):
+                m.train()
+
+
     def compute_topological_data_analysis(self, num_samples):
         # Logic to compute Topological Data Analysis
         return np.random.randint(0, 10, num_samples)
@@ -254,20 +289,20 @@ class InferenceSection:
 
 
 
-                
+
     def calculate_statistics(self, data):
         self.stats = {}
-        
+
         ground_truth = data['GT']
-        
+
         for column in data.columns:
             if column not in ['Id','GT']:
                 data_column = data[column]
                 self.stats[column] = {
                     'accuracy' : accuracy_score(data_column, ground_truth),
-                    'precision' : precision_score(data_column, ground_truth, average='weighted'),
-                    'recall' :  recall_score(data_column, ground_truth, average='weighted'),
-                    'f1_score' :  f1_score(data_column, ground_truth, average='weighted'),
+                    'precision' : precision_score(data_column, ground_truth, average='weighted', zero_division=0),
+                    'recall' : recall_score(data_column, ground_truth, average='weighted', zero_division=0),
+                    'f1_score' : f1_score(data_column, ground_truth, average='weighted', zero_division=0),
                 }
 
 
@@ -277,25 +312,25 @@ class InferenceSection:
         for method in self.options:
             get_stats = self.get_stats(method)
             results_to_table.append(get_stats)
-        
+
         self.results_table.update_table(results_to_table, self.result_type)
-        
-        
-        
-        
+
+
+
+
     def get_stats(self, method):
         if method in self.stats:
             method_stats = self.stats[method]
-            
+
             # Classificatore: restituisce accuratezza e F1-score
             accuracy = method_stats['accuracy']
             f1_score = method_stats['f1_score']
             return [f"{accuracy:.3f}", f"{f1_score:.3f}"]
-        
+
         # Se il metodo non esiste o non contiene le metriche cercate
         return ["N/A", "N/A"]
 
-        
+
     def export_results(self):
         # Clear previous messages
         self.comunication_section.display_message("", st.COMUNICATION_COLOR)
@@ -311,21 +346,21 @@ class InferenceSection:
             filetypes=[('CSV files', '*.csv')],
             initialfile='results.csv'
         )
-        
+
         if file_path:
             # Split the file path into directory and base file name
             base_path, ext = os.path.splitext(file_path)
-            
+
             # Define paths for statistics and inference results
             stats_file_path = base_path + "_stats" + ext
             results_file_path = base_path + "_inferences" + ext
-            
+
             # Save statistics to the stats file in the requested format
             with open(stats_file_path, 'w') as f:
                 # Write the header for the methods
                 methods = list(self.stats.keys())
                 f.write("metric," + ",".join(methods) + "\n")
-                
+
                 # Write each metric as a row
                 metrics = ['accuracy', 'precision', 'recall', 'f1_score']
                 for metric in metrics:
@@ -333,13 +368,13 @@ class InferenceSection:
                     for method in methods:
                         f.write(f",{self.stats[method][metric]:.2f}")
                     f.write("\n")
-            
+
             # Save inference results to the results file
             self.results_df.to_csv(results_file_path, index=False)
-            
+
             # Update status message to indicate successful export
             self.comunication_section.display_message(
-                f"CSV files exported: {os.path.basename(stats_file_path)} and {os.path.basename(results_file_path)}", 
+                f"CSV files exported: {os.path.basename(stats_file_path)} and {os.path.basename(results_file_path)}",
                 st.COMUNICATION_COLOR
             )
 
