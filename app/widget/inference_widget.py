@@ -8,6 +8,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import threading
 
 class InferenceSection:
     def __init__(self, master, import_section, results_table, comunication_section):
@@ -232,6 +233,7 @@ class InferenceSection:
         checkboxes = self.import_section.get_dropout_checkboxes()
         # if checkboxes is None: 
             # Itera per il numero di forward_passes richiesto
+
         for fp in range(forward_passes):
             predictions = np.empty((0, n_classes))
 
@@ -239,8 +241,7 @@ class InferenceSection:
             self.enable_training_dropout(model)  # Abilita dropout anche in modalità eval
 
             # Esegui l'inferenza sui batch
-            for i, (images, _) in enumerate(dataloader):
-                images = images.to(th.device('cuda' if th.cuda.is_available() else 'cpu'))
+            for _ , (images, _) in enumerate(dataloader):
 
                 with th.no_grad():
                     outputs = model(images)
