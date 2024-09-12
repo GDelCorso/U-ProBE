@@ -13,3 +13,4 @@ class AppStyles:
     HOVER_BG = '#404040'
     COMUNICATION_COLOR = 'white'
     ERROR_COLOR = 'red'
+    WARNING_COLOR = 'yellow'
