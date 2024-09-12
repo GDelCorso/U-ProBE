@@ -4,7 +4,7 @@ import torch.nn as nn
 import concurrent.futures
 from threading import Lock
 
-def mc_dropout(model, dataloader, num_samples, max_forward_passes=1000, n_classes=10, num_threads=4, threshold=1e-3):
+def mc_dropout(model, dataloader, num_samples, n_classes, threshold=1e-3, max_forward_passes=1000, num_threads=4):
     def enable_training_dropout(model):
         for m in model.modules():
             if isinstance(m, nn.Dropout):
@@ -38,7 +38,7 @@ def mc_dropout(model, dataloader, num_samples, max_forward_passes=1000, n_classe
             with lock:
                 dropout_predictions = np.vstack((dropout_predictions, [new_predictions]))
             
-            if fp > 1: 
+            if fp > 1 and fp % 5 == 0: 
                 halting_criterion = calculate_halting_criterion(dropout_predictions)
                 if halting_criterion < threshold:
                     print(f"Early stopping at forward pass {fp + 1}")

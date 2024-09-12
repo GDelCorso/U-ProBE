@@ -158,7 +158,7 @@ class InferenceSection:
             self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader,len(original_data))
 
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(original_data))
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(original_data), self.import_section.get_num_classes())
 
         if self.options_state["Topological data analysis"]:
             self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(original_data))
@@ -201,8 +201,8 @@ class InferenceSection:
     def compute_trustscore(self, model, dataloader, num_samples):
         return methods.trustscore(model, dataloader, num_samples)
 
-    def compute_mc_dropout(self, model, dataloader, num_samples):
-        return methods.mc_dropout(model, dataloader, num_samples)
+    def compute_mc_dropout(self, model, dataloader, num_samples, num_classes):
+        return methods.mc_dropout(model, dataloader, num_samples, num_classes)
 
     def compute_topological_data_analysis(self, model, dataloader, num_samples):
         return methods.topological_data_analysis(model, dataloader, num_samples)

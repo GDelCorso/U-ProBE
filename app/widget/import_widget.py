@@ -77,6 +77,7 @@ class ImportSection:
         self.data_file_path = None
         self.model_class_path = None
         self.dropout_checkboxes = None
+        self.num_classes = None
 
     # Function to select the model file (.pth)
     def select_model_file(self):
@@ -112,6 +113,7 @@ class ImportSection:
             if self.model_class is None:
                 return
             self.model_class_path = filename
+            self.set_num_classes(self.calulate_num_classes())
             self.model_class_file_label.configure(text=f"ModelClass: {os.path.basename(filename)}", font=st.TEXT_FONT)
             self.comunication_section.display_message("ModelClass file loaded successfully", st.COMUNICATION_COLOR)
 
@@ -195,6 +197,18 @@ class ImportSection:
     # Function to retrieve the dropout checkboxes
     def get_dropout_checkboxes(self):
         return self.dropout_checkboxes
+    
+    def calulate_num_classes(self):
+        layers = self.get_layers(self.model_class)
+        if layers is None:
+            return None
+        return layers[-1].out_features
+        
+    def set_num_classes(self, num_classes):
+        self.num_classes = num_classes
+        
+    def get_num_classes(self):
+        return self.num_classes
         
     # Function to visualize the neural network model
     def visualize_model(self):
