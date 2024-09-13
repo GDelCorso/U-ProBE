@@ -27,14 +27,17 @@ class ImageDialog(ctk.CTkToplevel):
 
         self.batch_size = 4
         self.input_shape = (self.batch_size, 3, 224, 224)
+        
+        self.halting_criterion = 0.01
 
-        self.checkboxes_dict = defaultdict(bool)  # Initialize dictionary for checkboxes
+        self.checkboxes_dict = defaultdict(lambda: {"checked": False, "mc_dropout": 0.0})
 
         self.create_widgets()
         self.configure_grid()
 
         self.lift()
-        self.grab_set()
+        self.attributes('-topmost', True)
+        self.after_idle(self.attributes, '-topmost', False)
         self.minsize(720, 420)
 
         # Bind window close protocol
@@ -101,12 +104,24 @@ class ImageDialog(ctk.CTkToplevel):
             )
             self.error_label.grid(row=2, column=0, padx=10, pady=5, sticky="n")
 
-        # Title for checkboxes
-        self.checkbox_title_label = ctk.CTkLabel(self.main_frame, text="Dropout Layers", font=st.COLUMN_FONT)
-        self.checkbox_title_label.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
 
-        self.checkbox_frame = ctk.CTkFrame(self.main_frame)
-        self.checkbox_frame.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
+        self.dropout_frame = ctk.CTkFrame(self.main_frame)
+        self.dropout_frame.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
+        
+        self.checkbox_title_label = ctk.CTkLabel(self.dropout_frame, text="Dropout Layers", font=st.COLUMN_FONT)
+        self.checkbox_title_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        # Halting criterion label and input
+        self.halting_label = ctk.CTkLabel(self.dropout_frame, text="Halting Criterion:", font=st.TEXT_FONT)
+        self.halting_label.grid(row=0, column=1, padx=(20, 5), pady=5, sticky="e")
+        
+        self.halting_entry = ctk.CTkEntry(self.dropout_frame, width=60)
+        self.halting_entry.grid(row=0, column=2, padx=5, pady=5, sticky="e")
+        self.halting_entry.insert(0, str(self.halting_criterion))
+
+        # Checkbox frame (now moved to row 4)
+        self.dropout_frame = ctk.CTkFrame(self.main_frame)
+        self.dropout_frame.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
 
         self.close_button = ctk.CTkButton(self, text="Close", command=self.on_close, font=st.BUTTON_FONT)
         self.close_button.grid(row=2, column=0, pady=(5,10), padx=10, sticky="sew")
@@ -118,9 +133,9 @@ class ImageDialog(ctk.CTkToplevel):
 
         # Configure grid rows and columns
         for r in range(num_rows):
-            self.checkbox_frame.grid_rowconfigure(r, weight=1)
+            self.dropout_frame.grid_rowconfigure(r, weight=1)
         for c in range(max_columns):
-            self.checkbox_frame.grid_columnconfigure(c, weight=1)
+            self.dropout_frame.grid_columnconfigure(c, weight=1)
 
         # Remove input layer from model sequence
         aux_model_layers = self.model_sequence[1:]
@@ -134,13 +149,13 @@ class ImageDialog(ctk.CTkToplevel):
             row = i // max_columns
             col = i % max_columns
 
-            layer_frame = ctk.CTkFrame(self.checkbox_frame, border_width=1)
+            layer_frame = ctk.CTkFrame(self.dropout_frame, border_width=1)
             layer_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
             # Configure grid for the layer frame
             layer_frame.columnconfigure(0, weight=1)
             layer_frame.rowconfigure(0, weight=1)
-            layer_frame.rowconfigure(1, weight=0)
+            layer_frame.rowconfigure((1,2), weight=0)
 
             # Create checkbox with layer details
             if self.is_convolutional(self.hidden_layers[i]):
@@ -165,26 +180,67 @@ class ImageDialog(ctk.CTkToplevel):
             if have_dropout:
                 dropout_label = ctk.CTkLabel(
                     layer_frame,
-                    text=f"{dropout_name} in Training\n p={probability}",
+                    text=f"{dropout_name} in Training (p={probability})",
                     font=st.TEXT_FONT
                 )
                 dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
                 checkbox.select()
-                self.checkboxes_dict[i + 1] = True
+                self.checkboxes_dict[i + 1]["checked"] = True
+                self.checkboxes_dict[i + 1]["mc_dropout"] = probability
             else:
                 dropout_label = ctk.CTkLabel(layer_frame, text="", font=st.TEXT_FONT)
                 dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
-                self.checkboxes_dict[i + 1] = False
+                self.checkboxes_dict[i + 1]["checked"] = False
 
-            if  self.num_hidden_layers > i + 1:
+            # Add MC-Dropout probability input
+            mc_dropout_frame = ctk.CTkFrame(layer_frame, fg_color="transparent")
+            mc_dropout_frame.grid(row=2, column=0, padx=5, pady=5, sticky="we")
+            
+            mc_dropout_label = ctk.CTkLabel(mc_dropout_frame, text="MC-Dropout Prob:", font=st.TEXT_FONT)
+            mc_dropout_label.grid(row=0, column=0, padx=5, sticky="e")
+            
+            mc_dropout_entry = ctk.CTkEntry(mc_dropout_frame, width=50, state="normal" if self.checkboxes_dict[i + 1]["checked"] else "disabled")
+            mc_dropout_entry.grid(row=0, column=1, sticky="w")
+            if self.checkboxes_dict[i + 1]["checked"]:
+                mc_dropout_entry.insert(0, str(self.checkboxes_dict[i + 1]["mc_dropout"]))
+            
+            # Update MC-Dropout probability when entry changes
+            mc_dropout_entry.bind("<FocusOut>", lambda event, idx=i+1: self.update_mc_dropout(event, idx))
+
+            if self.num_hidden_layers > i + 1:
                 while aux_model_layers and str(aux_model_layers[0]) != str(self.hidden_layers[i + 1]):
                     aux_model_layers = aux_model_layers[1:]
 
-            self.checkboxes.append(checkbox)
+            self.checkboxes.append((checkbox, mc_dropout_entry))
 
     def update_checkbox_status(self, idx):
         # Toggle checkbox status in dictionary
-        self.checkboxes_dict[idx] = not self.checkboxes_dict[idx]
+        self.checkboxes_dict[idx]["checked"] = not self.checkboxes_dict[idx]["checked"]
+        
+        # Enable/disable and clear MC-Dropout entry based on checkbox status
+        entry = self.checkboxes[idx-1][1]
+        if self.checkboxes_dict[idx]["checked"]:
+            entry.configure(state="normal")
+            if self.checkboxes_dict[idx]["mc_dropout"] > 0:
+                entry.delete(0, 'end')
+                entry.insert(0, str(self.checkboxes_dict[idx]["mc_dropout"]))
+        else:
+            entry.configure(state="disabled")
+            entry.delete(0, 'end')
+            self.checkboxes_dict[idx]["mc_dropout"] = 0.0
+
+    def update_mc_dropout(self, event, idx):
+        value = event.widget.get()
+        try:
+            value = float(value)
+            if 0 <= value <= 1:
+                self.checkboxes_dict[idx]["mc_dropout"] = value
+            else:
+                raise ValueError
+        except ValueError:
+            event.widget.delete(0, 'end')
+            self.checkboxes_dict[idx]["mc_dropout"] = 0.0
+
 
     def have_dropout(self, aux_model_layers, i):
         if i == self.num_hidden_layers - 1:
@@ -291,6 +347,13 @@ class ImageDialog(ctk.CTkToplevel):
         return isinstance(layer, (nn.Conv1d, nn.Conv2d, nn.Conv3d))
 
     def on_close(self):
-        # Save checkbox states and close the window
         self.import_widget.set_dropout_checkboxes(self.checkboxes_dict)
+       
+        try:
+            halting_value = float(self.halting_entry.get())
+            self.import_widget.set_halting_criterion(halting_value)
+        except ValueError:
+            # If the input is not a valid float, use the default value
+            self.import_widget.set_halting_criterion(0.01)
+        
         self.destroy()

@@ -78,6 +78,7 @@ class ImportSection:
         self.model_class_path = None
         self.dropout_checkboxes = None
         self.num_classes = None
+        self.halting_criterion = None
 
     # Function to select the model file (.pth)
     def select_model_file(self):
@@ -209,6 +210,12 @@ class ImportSection:
         
     def get_num_classes(self):
         return self.num_classes
+    
+    def set_halting_criterion(self, halting_criterion):
+        self.halting_criterion = halting_criterion
+    
+    def get_halting_criterion(self):
+        return self.halting_criterion
         
     # Function to visualize the neural network model
     def visualize_model(self):
