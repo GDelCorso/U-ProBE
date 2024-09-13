@@ -105,23 +105,30 @@ class ImageDialog(ctk.CTkToplevel):
             self.error_label.grid(row=2, column=0, padx=10, pady=5, sticky="n")
 
 
-        self.dropout_frame = ctk.CTkFrame(self.main_frame)
-        self.dropout_frame.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
-        
-        self.checkbox_title_label = ctk.CTkLabel(self.dropout_frame, text="Dropout Layers", font=st.COLUMN_FONT)
-        self.checkbox_title_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        self.top_frame = ctk.CTkFrame(self.main_frame)
+        self.top_frame.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
+        self.top_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        # "Dropout Layers" title (centered)
+        self.checkbox_title_label = ctk.CTkLabel(self.top_frame, text="Dropout Layers", font=st.COLUMN_FONT)
+        self.checkbox_title_label.grid(row=0, column=1, padx=10, pady=5)
+
+        # Halting criterion frame (right-aligned)
+        self.halting_criterion_frame = ctk.CTkFrame(self.top_frame)
+        self.halting_criterion_frame.grid(row=0, column=2, padx=10, pady=5, sticky="e")
 
         # Halting criterion label and input
-        self.halting_label = ctk.CTkLabel(self.dropout_frame, text="Halting Criterion:", font=st.TEXT_FONT)
-        self.halting_label.grid(row=0, column=1, padx=(20, 5), pady=5, sticky="e")
+        self.halting_label = ctk.CTkLabel(self.halting_criterion_frame, text="Halting Criterion:", font=st.TEXT_FONT)
+        self.halting_label.grid(row=0, column=0, padx=(5, 5), pady=5, sticky="w")
         
-        self.halting_entry = ctk.CTkEntry(self.dropout_frame, width=60)
-        self.halting_entry.grid(row=0, column=2, padx=5, pady=5, sticky="e")
+        self.halting_entry = ctk.CTkEntry(self.halting_criterion_frame, width=60)
+        self.halting_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
         self.halting_entry.insert(0, str(self.halting_criterion))
 
-        # Checkbox frame (now moved to row 4)
-        self.dropout_frame = ctk.CTkFrame(self.main_frame)
-        self.dropout_frame.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
+        # Checkbox frame (now in a separate row)
+        self.checkbox_frame = ctk.CTkFrame(self.main_frame)
+        self.checkbox_frame.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
 
         self.close_button = ctk.CTkButton(self, text="Close", command=self.on_close, font=st.BUTTON_FONT)
         self.close_button.grid(row=2, column=0, pady=(5,10), padx=10, sticky="sew")
@@ -133,9 +140,9 @@ class ImageDialog(ctk.CTkToplevel):
 
         # Configure grid rows and columns
         for r in range(num_rows):
-            self.dropout_frame.grid_rowconfigure(r, weight=1)
+            self.checkbox_frame.grid_rowconfigure(r, weight=1)
         for c in range(max_columns):
-            self.dropout_frame.grid_columnconfigure(c, weight=1)
+            self.checkbox_frame.grid_columnconfigure(c, weight=1)
 
         # Remove input layer from model sequence
         aux_model_layers = self.model_sequence[1:]
@@ -149,7 +156,7 @@ class ImageDialog(ctk.CTkToplevel):
             row = i // max_columns
             col = i % max_columns
 
-            layer_frame = ctk.CTkFrame(self.dropout_frame, border_width=1)
+            layer_frame = ctk.CTkFrame(self.checkbox_frame, border_width=1)
             layer_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
             # Configure grid for the layer frame
@@ -259,7 +266,8 @@ class ImageDialog(ctk.CTkToplevel):
     def configure_grid(self):
         self.grid_rowconfigure((0, 1, 2), weight=0)
         self.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
+        self.main_frame.grid_rowconfigure((0, 1, 2), weight=0)
+        self.main_frame.grid_rowconfigure((3, 4), weight=1)
         self.main_frame.grid_columnconfigure(0, weight=1)
         if self.num_hidden_layers > 0:
             self.set_checkboxes()
