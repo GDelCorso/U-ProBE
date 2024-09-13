@@ -28,7 +28,7 @@ class ImageDialog(ctk.CTkToplevel):
         self.batch_size = 4
         self.input_shape = (self.batch_size, 3, 224, 224)
         
-        self.halting_criterion = 0.01
+        self.threshhold_halting_criterion = 0.001
 
         self.checkboxes_dict = defaultdict(lambda: {"checked": False, "mc_dropout": 0.0})
 
@@ -115,16 +115,16 @@ class ImageDialog(ctk.CTkToplevel):
         self.checkbox_title_label.grid(row=0, column=1, padx=10, pady=5)
 
         # Halting criterion frame (right-aligned)
-        self.halting_criterion_frame = ctk.CTkFrame(self.top_frame)
-        self.halting_criterion_frame.grid(row=0, column=2, padx=10, pady=5, sticky="e")
+        self.threshhold_threshhold_halting_criterion_frame = ctk.CTkFrame(self.top_frame)
+        self.threshhold_threshhold_halting_criterion_frame.grid(row=0, column=2, padx=10, pady=5, sticky="e")
 
         # Halting criterion label and input
-        self.halting_label = ctk.CTkLabel(self.halting_criterion_frame, text="Halting Criterion:", font=st.TEXT_FONT)
-        self.halting_label.grid(row=0, column=0, padx=(5, 5), pady=5, sticky="w")
+        self.threshhold_halting_label = ctk.CTkLabel(self.threshhold_threshhold_halting_criterion_frame, text="Threshhold Halting Criterion:", font=st.TEXT_FONT)
+        self.threshhold_halting_label.grid(row=0, column=0, padx=(5, 5), pady=5, sticky="w")
         
-        self.halting_entry = ctk.CTkEntry(self.halting_criterion_frame, width=60)
-        self.halting_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        self.halting_entry.insert(0, str(self.halting_criterion))
+        self.threshhold_halting_entry = ctk.CTkEntry(self.threshhold_threshhold_halting_criterion_frame, width=60)
+        self.threshhold_halting_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.threshhold_halting_entry.insert(0, str(self.threshhold_halting_criterion))
 
         # Checkbox frame (now in a separate row)
         self.checkbox_frame = ctk.CTkFrame(self.main_frame)
@@ -358,10 +358,10 @@ class ImageDialog(ctk.CTkToplevel):
         self.import_widget.set_dropout_checkboxes(self.checkboxes_dict)
        
         try:
-            halting_value = float(self.halting_entry.get())
-            self.import_widget.set_halting_criterion(halting_value)
+            halting_value = float(self.threshhold_halting_entry.get())
+            self.import_widget.set_threshold_halting_criterion(halting_value)
         except ValueError:
             # If the input is not a valid float, use the default value
-            self.import_widget.set_halting_criterion(0.01)
+            self.import_widget.set_threshold_halting_criterion(0.001)
         
         self.destroy()
