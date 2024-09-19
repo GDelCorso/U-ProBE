@@ -27,18 +27,30 @@ def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_crit
     if not threshold_halting_criterion:
         threshold_halting_criterion = 0.001
     dropout_predictions = np.empty((0, num_samples, n_classes))
-    softmax = nn.Softmax(dim=1)
     lock = Lock()
 
     def process_forward_pass():
         predictions = np.empty((0, n_classes))
         model.eval()
         enable_training_dropout(model)
-        for _, (images, _) in enumerate(dataloader):
-            with th.no_grad():
-                outputs = model(images)
+        
+        softmax = nn.Softmax(dim=1)
+        
+        with th.no_grad():
+            for images, _, splits in dataloader:
+                test_indices = [i for i, split in enumerate(splits) if split == 'test']
+                test_images = [images[i] for i in test_indices]
+                
+                if not test_images:
+                    continue 
+                
+                test_images_tensor = th.stack(test_images)
+                
+                outputs = model(test_images_tensor)
                 outputs = softmax(outputs)
-            predictions = np.vstack((predictions, outputs.cpu().numpy()))
+                
+                predictions = np.vstack((predictions, outputs.cpu().numpy()))
+        
         return predictions
 
     def calculate_halting_criterion(predictions):
