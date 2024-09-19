@@ -148,26 +148,29 @@ class InferenceSection:
 
     def run_inference(self):
         model, dataloader, original_data = self.prepare_data(self.batch_size)
+        
+        test_data = original_data[original_data['split'] == 'test']
 
-        self.results_df = pd.DataFrame({"Id": original_data['id'], "GT": original_data['label']})
+        # Crea il DataFrame per i risultati dei test
+        self.results_df = pd.DataFrame({"Id": test_data['id'], "GT": test_data['label']})
 
         if self.options_state["No post-hoc method"]:
             self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
 
         if self.options_state["Trustscore"]:
-            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader,len(original_data))
+            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader,len(test_data))
 
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(original_data), self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
+            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
 
         if self.options_state["Topological data analysis"]:
-            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(original_data))
+            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(test_data))
 
         if self.options_state["Ensemble"]:
-            self.results_df['Ensemble'] = self.compute_ensemble(model, dataloader, len(original_data))
+            self.results_df['Ensemble'] = self.compute_ensemble(model, dataloader, len(test_data))
 
         if self.options_state["Few shot learning"]:
-            self.results_df['Few shot learning'] = self.compute_few_shot_learning(model, dataloader, len(original_data))
+            self.results_df['Few shot learning'] = self.compute_few_shot_learning(model, dataloader, len(test_data))
 
         self.calculate_statistics()
         self.update_table()
@@ -190,13 +193,7 @@ class InferenceSection:
         return model, dataloader, data
 
     def compute_no_post_hoc_method(self, model, dataloader):
-        model.eval()
-        inference_results = []
-        with th.no_grad():
-            for batch_features, _ in dataloader:
-                outputs = model(batch_features)
-                inference_results.extend(np.argmax(outputs, axis=1))
-        return np.array(inference_results)
+        return methods.no_post_hoc_method(model, dataloader)
 
     def compute_trustscore(self, model, dataloader, num_samples):
         return methods.trustscore(model, dataloader, num_samples)

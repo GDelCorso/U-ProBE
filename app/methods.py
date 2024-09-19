@@ -4,6 +4,19 @@ import torch.nn as nn
 import concurrent.futures
 from threading import Lock
 
+def no_post_hoc_method(model, dataloader):
+    model.eval()
+    inference_results = []
+    
+    with th.no_grad():
+        for batch_features, _, split in dataloader:
+            for feature, split_value in zip(batch_features, split):
+                if split_value == 'test': 
+                    outputs = model(feature.unsqueeze(0)) 
+                    inference_results.extend(np.argmax(outputs, axis=1).cpu().numpy())
+                    
+    return np.array(inference_results)
+
 def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
     def enable_training_dropout(model):
         for m in model.modules():
