@@ -55,7 +55,7 @@ class ImageDialog(ctk.CTkToplevel):
         aspect_ratio = img_width / img_height
 
         max_img_width = self.max_width - 40
-        max_img_height = self.max_height - 200
+        max_img_height = self.max_height - 300
 
         if aspect_ratio > 1:
             new_width = min(img_width, max_img_width)
@@ -71,7 +71,7 @@ class ImageDialog(ctk.CTkToplevel):
     def create_widgets(self):
         # Main title
         self.title_label = ctk.CTkLabel(self, text="Graph Visualizer", font=st.HEADER_FONT)
-        self.title_label.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+        self.title_label.grid(row=0, column=0, padx=10, pady=(5,0), sticky="nsew")
 
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
@@ -83,16 +83,16 @@ class ImageDialog(ctk.CTkToplevel):
                 text="Insert input shape to visualize model",
                 font=st.HEADER_FONT,
                 width=400,
-                height=280
+                height=200  # Reduced height
             )
-            self.image_label.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+            self.image_label.grid(row=0, column=0, padx=10, pady=(5,0), sticky="nsew")
 
             # Frame containing input and button
             self.input_button_frame = ctk.CTkFrame(self.main_frame, corner_radius=10)
-            self.input_button_frame.grid(row=1, column=0, padx=10, pady=5, sticky="n")
+            self.input_button_frame.grid(row=1, column=0, padx=10, pady=2, sticky="n")
 
             self.input_shape_entry = ctk.CTkEntry(self.input_button_frame, placeholder_text="3, 224, 224")
-            self.input_shape_entry.grid(row=0, column=0, padx=5, pady=5)
+            self.input_shape_entry.grid(row=0, column=0, padx=5, pady=2)
 
             self.update_button = ctk.CTkButton(
                 self.input_button_frame,
@@ -100,7 +100,7 @@ class ImageDialog(ctk.CTkToplevel):
                 command=self.show_graph_from_button,
                 font=st.BUTTON_FONT
             )
-            self.update_button.grid(row=0, column=1, padx=5, pady=5)
+            self.update_button.grid(row=0, column=1, padx=5, pady=2)
 
             # Error message area
             self.error_label = ctk.CTkLabel(
@@ -109,36 +109,31 @@ class ImageDialog(ctk.CTkToplevel):
                 font=st.STATUS_FONT,
                 text_color=st.ERROR_COLOR
             )
-            self.error_label.grid(row=2, column=0, padx=10, pady=5, sticky="n")
-
-
+            self.error_label.grid(row=2, column=0, padx=10, pady=(5,0), sticky="n")
 
         self.top_frame = ctk.CTkFrame(self.main_frame)
-        self.top_frame.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
+        self.top_frame.grid(row=3, column=0, padx=10, pady=(5,0), sticky="nsew")
         self.top_frame.grid_columnconfigure((0, 1, 2), weight=1)
 
         # "Dropout Layers" title (centered)
-        self.checkbox_title_label = ctk.CTkLabel(self.top_frame, text="Dropout Layers", font=st.COLUMN_FONT)
-        self.checkbox_title_label.grid(row=0, column=1, padx=10, pady=5)
+        self.checkbox_title_label = ctk.CTkLabel(self.top_frame, text="MC-Dropout Layers", font=st.COLUMN_FONT)
+        self.checkbox_title_label.grid(row=0, column=1, padx=10, pady=(5,2))
 
         # Halting criterion frame (right-aligned)
         self.threshhold_threshhold_halting_criterion_frame = ctk.CTkFrame(self.top_frame)
-        self.threshhold_threshhold_halting_criterion_frame.grid(row=0, column=2, padx=10, pady=5, sticky="e")
+        self.threshhold_threshhold_halting_criterion_frame.grid(row=0, column=2, padx=10, pady=2, sticky="e")
 
         # Halting criterion label and input
         self.threshhold_halting_label = ctk.CTkLabel(self.threshhold_threshhold_halting_criterion_frame, text="Threshhold Halting Criterion:", font=st.TEXT_FONT)
-        self.threshhold_halting_label.grid(row=0, column=0, padx=(5, 5), pady=5, sticky="w")
+        self.threshhold_halting_label.grid(row=0, column=0, padx=(5, 5), pady=2, sticky="w")
         
         self.threshhold_halting_entry = ctk.CTkEntry(self.threshhold_threshhold_halting_criterion_frame, width=60)
-        self.threshhold_halting_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.threshhold_halting_entry.grid(row=0, column=1, padx=5, pady=2, sticky="w")
         self.threshhold_halting_entry.insert(0, str(self.threshhold_halting_criterion))
 
         # Checkbox frame (now in a separate row)
         self.checkbox_frame = ctk.CTkFrame(self.main_frame)
         self.checkbox_frame.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
-
-        self.close_button = ctk.CTkButton(self, text="Close", command=self.on_close, font=st.BUTTON_FONT)
-        self.close_button.grid(row=2, column=0, pady=(5,10), padx=10, sticky="sew")
 
     def set_checkboxes(self):
         self.checkboxes = []
@@ -164,7 +159,7 @@ class ImageDialog(ctk.CTkToplevel):
             col = i % max_columns
 
             layer_frame = ctk.CTkFrame(self.checkbox_frame, border_width=1)
-            layer_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
+            layer_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
 
             # Configure grid for the layer frame
             layer_frame.columnconfigure(0, weight=1)
@@ -185,7 +180,7 @@ class ImageDialog(ctk.CTkToplevel):
                     font=st.TEXT_FONT
                 )
 
-            checkbox.grid(row=0, column=0, padx=5, pady=(5,0), sticky="w")
+            checkbox.grid(row=0, column=0, padx=5, pady=2, sticky="w")
 
             # Associate callback function to checkbox
             checkbox.configure(command=lambda idx=i+1: self.update_checkbox_status(idx))
@@ -197,7 +192,7 @@ class ImageDialog(ctk.CTkToplevel):
                     text=f"{dropout_name} in Training (p={probability})",
                     font=st.TEXT_FONT
                 )
-                dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
+                dropout_label.grid(row=1, column=0, padx=5, pady=2, sticky="we")
                 if(self.already_shown):
                     if self.checkboxes_dict[i + 1]["checked"]:
                         checkbox.select()
@@ -218,10 +213,10 @@ class ImageDialog(ctk.CTkToplevel):
                     
             # Add MC-Dropout probability input
             mc_dropout_frame = ctk.CTkFrame(layer_frame, fg_color="transparent")
-            mc_dropout_frame.grid(row=2, column=0, padx=5, pady=5, sticky="we")
+            mc_dropout_frame.grid(row=2, column=0, padx=2, pady=2, sticky="we")
             
             mc_dropout_label = ctk.CTkLabel(mc_dropout_frame, text="MC-Dropout Prob:", font=st.TEXT_FONT)
-            mc_dropout_label.grid(row=0, column=0, padx=5, sticky="e")
+            mc_dropout_label.grid(row=0, column=0, padx=2, pady=2, sticky="e")
             
             mc_dropout_entry = ctk.CTkEntry(mc_dropout_frame, width=50, state="normal" if self.checkboxes_dict[i + 1]["checked"] else "disabled")
             mc_dropout_entry.grid(row=0, column=1, sticky="w")
@@ -281,10 +276,11 @@ class ImageDialog(ctk.CTkToplevel):
         return aux_model_layers, "No Dropout", 0, False
 
     def configure_grid(self):
-        self.grid_rowconfigure((0, 1, 2), weight=0)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=0)
         self.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure((0, 1, 2), weight=0)
-        self.main_frame.grid_rowconfigure((3, 4), weight=1)
+        self.main_frame.grid_rowconfigure(4, weight=1)
+        self.main_frame.grid_rowconfigure((0, 1, 2, 3), weight=0)
         self.main_frame.grid_columnconfigure(0, weight=1)
         if self.num_hidden_layers > 0:
             self.set_checkboxes()
