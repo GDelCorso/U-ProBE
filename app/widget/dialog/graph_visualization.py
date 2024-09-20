@@ -15,8 +15,8 @@ class ImageDialog(ctk.CTkToplevel):
         icon_path = os.path.join(os.path.dirname(__file__), "../../../assets/icon.ico")
         self.after(250, lambda: self.iconbitmap(icon_path))
 
-        self.max_width = 1920
-        self.max_height = 1080
+        self.max_width = 1280
+        self.max_height = 720
 
         self.model = model
         self.input_layer = layers[0]
@@ -25,12 +25,19 @@ class ImageDialog(ctk.CTkToplevel):
         self.model_sequence = model_sequence
         self.import_widget = import_widget
 
+        self.already_shown = True
         self.batch_size = 4
         self.input_shape = (self.batch_size, 3, 224, 224)
         
-        self.threshhold_halting_criterion = 0.001
-
-        self.checkboxes_dict = defaultdict(lambda: {"checked": False, "mc_dropout": 0.0})
+        self.threshhold_halting_criterion = self.import_widget.get_threshold_halting_criterion()
+        if(self.threshhold_halting_criterion is None):
+            self.already_shown = False
+            self.threshhold_halting_criterion = 0.001
+        
+        self.checkboxes_dict = self.import_widget.get_dropout_checkboxes()
+        if self.checkboxes_dict is None:
+            self.already_shown = False
+            self.checkboxes_dict = defaultdict(lambda: {"checked": False, "mc_dropout": 0.0})
 
         self.create_widgets()
         self.configure_grid()
@@ -191,14 +198,24 @@ class ImageDialog(ctk.CTkToplevel):
                     font=st.TEXT_FONT
                 )
                 dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
-                checkbox.select()
-                self.checkboxes_dict[i + 1]["checked"] = True
-                self.checkboxes_dict[i + 1]["mc_dropout"] = probability
+                if(self.already_shown):
+                    if self.checkboxes_dict[i + 1]["checked"]:
+                        checkbox.select()
+                else:
+                    checkbox.select()
+                    self.checkboxes_dict[i + 1]["checked"] = True
+                    self.checkboxes_dict[i + 1]["mc_dropout"] = probability
             else:
                 dropout_label = ctk.CTkLabel(layer_frame, text="", font=st.TEXT_FONT)
                 dropout_label.grid(row=1, column=0, padx=5, pady=5, sticky="we")
-                self.checkboxes_dict[i + 1]["checked"] = False
-
+                if(self.already_shown):
+                    if self.checkboxes_dict[i + 1]["checked"]:
+                        checkbox.select()
+                    else:
+                        checkbox.deselect()
+                else:
+                    self.checkboxes_dict[i + 1]["checked"] = False
+                    
             # Add MC-Dropout probability input
             mc_dropout_frame = ctk.CTkFrame(layer_frame, fg_color="transparent")
             mc_dropout_frame.grid(row=2, column=0, padx=5, pady=5, sticky="we")
@@ -354,14 +371,25 @@ class ImageDialog(ctk.CTkToplevel):
     def is_convolutional(self, layer):
         return isinstance(layer, (nn.Conv1d, nn.Conv2d, nn.Conv3d))
 
+    def update_mc_dropout_values(self):
+        for idx, (_, mc_dropout_entry) in enumerate(self.checkboxes, start=1):
+            if self.checkboxes_dict[idx]["checked"]:
+                try:
+                    value = float(mc_dropout_entry.get())
+                    if 0 <= value <= 1:
+                        self.checkboxes_dict[idx]["mc_dropout"] = value
+                    else:
+                        self.checkboxes_dict[idx]["mc_dropout"] = 0.0
+                except ValueError:
+                    self.checkboxes_dict[idx]["mc_dropout"] = 0.0
+    
     def on_close(self):
+        self.update_mc_dropout_values()
         self.import_widget.set_dropout_checkboxes(self.checkboxes_dict)
-       
         try:
             halting_value = float(self.threshhold_halting_entry.get())
             self.import_widget.set_threshold_halting_criterion(halting_value)
         except ValueError:
-            # If the input is not a valid float, use the default value
             self.import_widget.set_threshold_halting_criterion(0.001)
         
         self.destroy()

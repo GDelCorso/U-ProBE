@@ -163,11 +163,16 @@ class ImportSection:
     # Function to remove the selected ModelClass file
     def remove_model_class_file(self):
         self.model_class_path = None
+        self.dropout_checkboxes = None
+        self.num_classes = None
+        self.model_class = None
+        self.threshhold_halting_criterion = None
         self.model_class_file_label.configure(text="No Model Class File selected", font=st.TEXT_FONT)
         
     # Function to remove the selected dataset loader file
     def remove_dataset_file(self):
         self.dataset_file_path = None
+        self.dataset_class = None
         self.dataset_file_label.configure(text="No DataSet Loader selected", font=st.TEXT_FONT)
         
     # Function to remove the selected data file
