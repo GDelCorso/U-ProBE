@@ -1,6 +1,7 @@
 import numpy as np
 import torch as th
 import torch.nn as nn
+import pandas as pd
 import concurrent.futures
 from threading import Lock
 
@@ -76,9 +77,61 @@ def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_crit
     final_predictions = np.argmax(mean_predictions, axis=1)
     return final_predictions
 
+
+# Funzione per generare il DataFrame con i risultati
+def get_dataframe(model, dataloader):
+    model.eval()
+    results = []
+    
+    # Funzione per calcolare la tabella dei risultati
+    def calculate_results_table(gt_value, predicted, fc_output):
+        row = {
+            'GT': gt_value.item(),
+            'predicted': predicted
+        }
+        
+        # Aggiungi i valori dei nodi del layer fully connected
+        fc_output_values = fc_output.squeeze().tolist()
+        for i, value in enumerate(fc_output_values):
+            row[f'node_{i}'] = value
+        return row
+
+    # Funzione per ottenere l'output del primo layer fully connected
+    def get_fc_output(model, x):
+        for _, module in model.named_modules():
+            if isinstance(module, th.nn.Linear):
+                return module(x)
+        return None
+    
+    with th.no_grad():
+        for batch_features, gt, split in dataloader:
+            for feature, gt_value, split_value in zip(batch_features, gt, split):
+                if split_value == 'training':
+                    feature = feature.unsqueeze(0)
+                    
+                    # Appiattisci l'immagine
+                    feature_flat = feature.view(feature.size(0), -1)  
+
+                    # Ottieni l'output del fully connected
+                    fc_output = get_fc_output(model, feature_flat)
+                    if fc_output is not None:
+                        # Ottieni l'output finale del modello
+                        final_output = model(feature_flat)
+                        predicted = th.argmax(final_output, dim=1).item()
+                        
+                        # Usa la funzione esterna per calcolare la riga della tabella
+                        row = calculate_results_table(gt_value, predicted, fc_output)
+                        results.append(row)
+                    else:
+                        break
+    
+    # Crea un DataFrame con i risultati
+    df = pd.DataFrame(results)
+    return df
+
+# Funzione trustscore ridotta
 def trustscore(model, dataloader, num_samples):
-    # Implementazione del metodo Trustscore
-    # Per ora, ritorniamo valori casuali
+    df = get_dataframe(model, dataloader)
     return np.random.randint(0, 10, num_samples)
 
 def topological_data_analysis(model, dataloader, num_samples):
