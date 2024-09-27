@@ -16,8 +16,6 @@ def no_post_hoc_method(model, dataloader):
                     outputs = model(feature.unsqueeze(0)) 
                     inference_results.extend(np.argmax(outputs, axis=1).cpu().numpy())
                     
-    print("No Post-Hoc Method")
-    print(np.array(inference_results))
     return np.array(inference_results)
 
 def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
@@ -181,7 +179,6 @@ def trustscore(model, dataloader, num_samples):
                 try:
                     predicted_score_list.append(self.TrustScore(feature_prediction, class_prediction_list[i]))
                 except Exception as e:
-                    print(f"Error calculating TrustScore for sample {i}: {e}")
                     predicted_score_list.append(-1)
             
             return predicted_score_list
@@ -205,7 +202,7 @@ def trustscore(model, dataloader, num_samples):
             if distance=="k-nearest" :
                 dist_h_set.append(fun_distance_k_nearest(list_h_set[i_class], feature_prediction, k_nearest)) 
             else:
-                print("\nWARNING: errore nella definizione della distanza.")
+                continue
 
         distance_coincident = dist_h_set[class_type.index(class_prediction)]
 
@@ -235,7 +232,6 @@ def trustscore(model, dataloader, num_samples):
 
         # Warning su k:
         if k>len(reference_set):
-            print("\nWARNING: k > size of the classified dataset. Set up k = the size.")
             k = len(reference_set)
         
         
@@ -253,17 +249,14 @@ def trustscore(model, dataloader, num_samples):
 
     trust_scores = []
     for i in range(len(df_test)):
-        print("\nTest di rigo:", i, "Predetto:", df_test.iloc[i]['predicted'], "Vero:", df_test.iloc[i]['GT'])
         feature_prediction = df_test.drop(columns=['GT', 'predicted']).iloc[i].values
         trust_score = TrustScore_instance.TrustScore(feature_prediction)
-        print(trust_score)
         trust_scores.append(trust_score)
         
     trust_scores_max = np.array([max(score, key=score.get) for score in trust_scores])
-    print(trust_scores_max)
+    return trust_scores_max
         
     
-    return np.random.randint(0, 10, num_samples)
 
 def topological_data_analysis(model, dataloader, num_samples):
     # Implementazione dell'analisi topologica dei dati
