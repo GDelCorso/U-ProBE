@@ -137,10 +137,10 @@ def get_dataframe(model, dataloader):
     return df_training, df_test
 
 # Funzione trustscore ridotta
-def trustscore(model, dataloader, num_samples):
-    class  TrustScore:    
+def trustscore(model, dataloader, distance, k_nearest):
+    class TrustScore:
         # Inizializzazione classe
-        def __init__(self, reference_data, correct_class, alpha_set = 1, threshold = 1, distance="k-nearest", k_nearest = 3):
+        def __init__(self, reference_data, correct_class, distance, k_nearest):
             self.reference_data = list(reference_data)
             self.correct_class = list(correct_class)
             
@@ -151,39 +151,27 @@ def trustscore(model, dataloader, num_samples):
             self.indices_class = list(set(correct_class))
             self.elements_class = [self.correct_class.count(val) for val in self.indices_class] 
             
-            self.alpha_set = alpha_set
-            self.threshold = threshold
             self.distance = distance
-                
-            self.k_nearest = int(k_nearest)
+            
+            if self.distance=="k-nearest":
+                self.k_nearest = int(k_nearest)
+            else:
+                self.k_nearest = None
+            
 
 
-        def TrustScore(self, feature_prediction, class_prediction=None):
+        def TrustScore(self, feature_prediction):
             
             feature_prediction = list(feature_prediction)
             
-            if class_prediction!=None: 
-                predicted_score = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, \
-                                                feature_prediction, class_prediction, self.distance, self.k_nearest)
-            else:
-                predicted_score = {}
-                for val_class in self.indices_class:
-                    predicted_score[val_class] = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, \
-                                                                feature_prediction, val_class, self.distance, self.k_nearest)
+            predicted_score = {}
+            for val_class in self.indices_class:
+                predicted_score[val_class] = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, feature_prediction, val_class, self.distance, self.k_nearest)
+            
             return predicted_score
-            
-        def TrustScoreList(self, feature_prediction_list, class_prediction_list):
-            predicted_score_list = []
-            
-            for i, feature_prediction in enumerate(feature_prediction_list):
-                try:
-                    predicted_score_list.append(self.TrustScore(feature_prediction, class_prediction_list[i]))
-                except Exception as e:
-                    predicted_score_list.append(-1)
-            
-            return predicted_score_list
 
-    def fun_TrustScore(alpha_reference_data, alpha_correct_class, feature_prediction, class_prediction, distance="k-nearest", k_nearest=10):
+
+    def fun_TrustScore(alpha_reference_data, alpha_correct_class, feature_prediction, class_prediction, distance, k_nearest):
 
         class_type = list(set(alpha_correct_class))
         number_class = len(set(alpha_correct_class))
@@ -198,15 +186,22 @@ def trustscore(model, dataloader, num_samples):
             
         dist_h_set = []
         
-        for i_class in range(0, number_class):
-            if distance=="k-nearest" :
-                dist_h_set.append(fun_distance_k_nearest(list_h_set[i_class], feature_prediction, k_nearest)) 
-            else:
-                continue
+        if distance=="nearest":
+            for i_class in range(0, number_class):
+                dist_h_set.append(fun_distance_nearest(list_h_set[i_class], feature_prediction))
+        elif distance=="average":
+            for i_class in range(0, number_class):
+                dist_h_set.append(fun_distance_average(list_h_set[i_class], feature_prediction))    
+        elif distance=="centroid": 
+            for i_class in range(0, number_class):
+                dist_h_set.append(fun_distance_centroid(list_h_set[i_class], feature_prediction)) 
+        elif distance=="k-nearest":
+            for i_class in range(0, number_class):
+                dist_h_set.append(fun_distance_k_nearest(list_h_set[i_class], feature_prediction, k_nearest))         
+            
 
         distance_coincident = dist_h_set[class_type.index(class_prediction)]
 
-            
         dist_h_set.pop(class_type.index(class_prediction))
                 
         distance_not_coincident = min(dist_h_set)   
@@ -215,7 +210,31 @@ def trustscore(model, dataloader, num_samples):
 
         return trust_score 
     
-    def fun_distance_k_nearest(reference_set, x_test, k):        
+    # Nearest neighbour distance:
+    # The minimum among the euclidean distances
+    def fun_distance_nearest(reference_set,x_test):
+        import numpy as np
+        
+        # Definiamo una lista di distanze:
+        distances_list = []
+        
+        # Scorriamo la lista delle reference:
+        for i_temp, val in enumerate(reference_set):
+            # Scorriamo sul numero di features e definiamo la  distanza.
+            distances_list.append(0)
+            for j_temp, val_feature in enumerate(val):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+                distances_list[i_temp] += (val_feature-x_test[j_temp])**2
+            
+            # Effettuiamo la radice:
+            distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
+
+        return min(distances_list)
+        
+    # K nearest 
+    # The average of the k nearest elements
+    def fun_distance_k_nearest(reference_set, x_test, k):
+        import numpy as np
+        
         
         # Definiamo una lista di distanze:
         distances_list = []
@@ -232,20 +251,71 @@ def trustscore(model, dataloader, num_samples):
 
         # Warning su k:
         if k>len(reference_set):
+            print("\nWARNING: k > size of the classified dataset. Set up k = the size.")
             k = len(reference_set)
         
         
         # Si crea una lista con le k distanze più vicine:
         k_distances_list= []
-        for _ in range(0,k):
+        for i in range(0,k):
             k_distances_list.append(min(distances_list))
             distances_list.pop(np.argmin(distances_list))
 
         return np.mean(k_distances_list)  
 
+
+    # The average among the euclidean distances
+    def fun_distance_average(reference_set,x_test):
+        import numpy as np
+        
+        # Definiamo una lista di distanze:
+        distances_list = []
+        
+        # Scorriamo la lista delle reference:
+        for i_temp, val in enumerate(reference_set):
+            # Scorriamo sul numero di features e definiamo la  distanza.
+            distances_list.append(0)
+            for j_temp, val_feature in enumerate(val):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+                distances_list[i_temp] += (val_feature-x_test[j_temp])**2
+            
+            # Effettuiamo la radice:
+            distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
+
+        return np.mean(distances_list)
+
+
+    # Distanza centroide. Ricava il centroide (la media su ciascuna feature) del gruppo e poi calcola la distanza da quel punto
+    def fun_distance_centroid(reference_set, x_test):
+        import numpy as np
+        
+        # Find the centroid
+        centroid_features = []
+        
+        n_features = len(x_test)
+        
+        for i_features in range(0, n_features):
+            centroid_features.append(0)
+            
+            # Popoliamolo calcolando la media:
+            i_ref = -1
+            for i_ref, val in enumerate(reference_set):
+                centroid_features[i_features] += val[i_features]
+            
+            centroid_features[i_features] = centroid_features[i_features]/(i_ref+1) # Facciamo la media
+            
+        # La distanza per il trust score è calcolata come la distanza dal centroide:
+        centroid_distance = 0
+        for j_temp, val_feature in enumerate(centroid_features):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+                centroid_distance += (val_feature-x_test[j_temp])**2
+        centroid_distance = np.sqrt(centroid_distance)
+
+        return centroid_distance  
+    
+
+
     df_training, df_test = get_dataframe(model, dataloader)
     
-    TrustScore_instance = TrustScore(df_training.drop(columns=['GT', 'predicted']).values, df_training['GT'].values)
+    TrustScore_instance = TrustScore(df_training.drop(columns=['GT', 'predicted']).values, df_training['GT'].values, distance, k_nearest)
 
     trust_scores = []
     for i in range(len(df_test)):
