@@ -26,6 +26,14 @@ class InferenceSection:
             "Ensemble",
             "Few shot learning",
         ]
+        
+        self.distances = [
+            "Nearest",
+            "Average",
+            "Centroid",
+            "K-Nearest",            
+        ]
+        
         self.options_state = {option: False for option in self.options}
 
         self.setup_ui()
@@ -37,7 +45,7 @@ class InferenceSection:
 
     def setup_ui(self):
         self.frame = ctk.CTkFrame(self.master)
-        self.frame.grid_rowconfigure((0, 1, 2), weight=1)
+        self.frame.grid_rowconfigure((0, 1, 2, 3), weight=1)
         self.frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="column")
 
         self.post_hoc_label = ctk.CTkLabel(self.frame, text="Post-Hoc Methods", font=st.HEADER_FONT)
@@ -68,23 +76,71 @@ class InferenceSection:
             self.checkbox_frame.grid_columnconfigure(i, weight=1)
 
     def create_buttons_widgets(self):
-        self.batch_size_frame = ctk.CTkFrame(self.frame, fg_color="transparent")
-        self.batch_size_frame.grid(row=2, column=0, pady=5, padx=(20,10), sticky="ew")
+        # Frame for parameters
+        self.parameters_frame = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.parameters_frame.grid(row=2, column=0, columnspan=3, pady=5, padx=5, sticky="ew")
+        
+        # Configure columns to distribute space evenly
+        for i in range(6):
+            self.parameters_frame.grid_columnconfigure(i, weight=1)
 
-        self.batch_size_label = ctk.CTkLabel(self.batch_size_frame, text="Batch Size:", font=st.TEXT_FONT)
-        self.batch_size_label.grid(row=0, column=0, padx=5, sticky="ew")
+        # Batch Size section
+        self.batch_size_label = ctk.CTkLabel(self.parameters_frame, text="Batch Size:", font=st.TEXT_FONT)
+        self.batch_size_label.grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        self.batch_size_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
+        self.batch_size_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        self.batch_size_entry = ctk.CTkEntry(self.batch_size_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
-        self.batch_size_entry.grid(row=0, column=1, padx=5, sticky="ew")
+        # Trustscore options (hidden initially)
+        self.distance_frame_label = ctk.CTkLabel(self.parameters_frame, text="Distance:", font=st.TEXT_FONT)
+        self.distance_frame_entry = ctk.CTkOptionMenu(
+            self.parameters_frame, 
+            values=self.distances, 
+            font=st.TEXT_FONT,
+            width=100,
+            command=self.on_distance_change
+        )
+        
+        # K-nearest options (hidden initially)
+        self.k_nearest_label = ctk.CTkLabel(self.parameters_frame, text="K:", font=st.TEXT_FONT)
+        self.k_nearest_frame_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
 
+        # Hide Trustscore options initially
+        self.toggle_trustscore_options(visible=False)
+
+        # Buttons
         self.inference_button = ctk.CTkButton(self.frame, text="Run Inference", command=self.do_inference, font=st.BUTTON_FONT)
-        self.inference_button.grid(row=2, column=1, pady=5, padx=5, sticky="ew")
-
+        self.inference_button.grid(row=3, column=0, pady=5, padx=5, sticky="ew")
         self.export_button = ctk.CTkButton(self.frame, text="Export .csv", command=self.export_results, font=st.BUTTON_FONT)
-        self.export_button.grid(row=2, column=2, pady=5, padx=5, sticky="ew")
+        self.export_button.grid(row=3, column=2, pady=5, padx=5, sticky="ew")
+
+    def toggle_trustscore_options(self, visible):
+        if visible:
+            self.distance_frame_label.grid(row=0, column=2, padx=5, pady=5, sticky="e")
+            self.distance_frame_entry.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+        else:
+            self.distance_frame_label.grid_remove()
+            self.distance_frame_entry.grid_remove()
+            self.k_nearest_label.grid_remove()
+            self.k_nearest_frame_entry.grid_remove()
+
+    def on_distance_change(self, choice):
+        self.selected_distance = choice
+        if choice == "K-Nearest":
+            self.k_nearest_label.grid(row=0, column=4, padx=5, pady=5, sticky="e")
+            self.k_nearest_frame_entry.grid(row=0, column=5, padx=5, pady=5, sticky="w")
+        else:
+            self.k_nearest_label.grid_remove()
+            self.k_nearest_frame_entry.grid_remove()
 
     def update_option_state(self, option):
         self.options_state[option] = not self.options_state[option]
+        
+        # Show/Hide Trustscore options
+        if option == "Trustscore":
+            self.toggle_trustscore_options(visible=self.options_state[option])
+            if not self.options_state[option]:
+                self.selected_distance = None
+                self.distance_frame_entry.set(self.distances[0])
 
     def do_inference(self):
         self.communication_section.display_message("", st.COMUNICATION_COLOR)
