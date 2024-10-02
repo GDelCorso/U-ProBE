@@ -172,62 +172,77 @@ def trustscore(model, dataloader, distance, k_nearest):
 
 
     def fun_TrustScore(alpha_reference_data, alpha_correct_class, feature_prediction, class_prediction, distance, k_nearest):
-
+        
         class_type = list(set(alpha_correct_class))
         number_class = len(set(alpha_correct_class))
         
         list_h_set = []
         
+        # Prepare reference sets for each class
         for i_class in range(0, number_class):
             list_h_set.append([])
             for i, val in enumerate(alpha_correct_class):
-                if val==class_type[i_class]:
+                if val == class_type[i_class]:
                     list_h_set[i_class].append(list(alpha_reference_data[i]))
-            
+        
         dist_h_set = []
         
-        if distance=="nearest":
+        # Calculate distances based on chosen method
+        if distance == "nearest":
             for i_class in range(0, number_class):
                 dist_h_set.append(fun_distance_nearest(list_h_set[i_class], feature_prediction))
-        elif distance=="average":
+        elif distance == "average":
             for i_class in range(0, number_class):
                 dist_h_set.append(fun_distance_average(list_h_set[i_class], feature_prediction))    
-        elif distance=="centroid": 
+        elif distance == "centroid": 
             for i_class in range(0, number_class):
                 dist_h_set.append(fun_distance_centroid(list_h_set[i_class], feature_prediction)) 
-        elif distance=="k-nearest":
+        elif distance == "k-nearest":
             for i_class in range(0, number_class):
                 dist_h_set.append(fun_distance_k_nearest(list_h_set[i_class], feature_prediction, k_nearest))         
-            
-
-        distance_coincident = dist_h_set[class_type.index(class_prediction)]
-
-        dist_h_set.pop(class_type.index(class_prediction))
-                
-        distance_not_coincident = min(dist_h_set)   
         
-        trust_score = distance_not_coincident/distance_coincident
-
-        return trust_score 
+        try:
+            predicted_class_index = class_type.index(class_prediction)
+        except ValueError:
+            return 0.0
+        
+        distance_coincident = dist_h_set[predicted_class_index]
+        
+        dist_h_set.pop(predicted_class_index)
+        
+        if not dist_h_set: 
+            return 0.0
+            
+        distance_not_coincident = min(dist_h_set)
+        
+        if distance_coincident == 0:
+            if distance_not_coincident == 0:
+                return 1.0
+            else:
+                return float('inf')
+        
+        epsilon = np.finfo(float).eps 
+        trust_score = distance_not_coincident / (distance_coincident + epsilon)
+        
+        return float(trust_score)
     
     # Nearest neighbour distance:
     # The minimum among the euclidean distances
-    def fun_distance_nearest(reference_set,x_test):
+    def fun_distance_nearest(reference_set, x_test):
         import numpy as np
         
-        # Definiamo una lista di distanze:
+        if not reference_set:  # Check if reference set is empty
+            return float('inf')  # Return infinity if no references available
+        
         distances_list = []
         
-        # Scorriamo la lista delle reference:
         for i_temp, val in enumerate(reference_set):
-            # Scorriamo sul numero di features e definiamo la  distanza.
             distances_list.append(0)
-            for j_temp, val_feature in enumerate(val):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
-                distances_list[i_temp] += (val_feature-x_test[j_temp])**2
+            for j_temp, val_feature in enumerate(val):
+                distances_list[i_temp] += (val_feature - x_test[j_temp])**2
             
-            # Effettuiamo la radice:
-            distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
-
+            distances_list[i_temp] = np.sqrt(distances_list[i_temp])
+        
         return min(distances_list)
         
     # K nearest 

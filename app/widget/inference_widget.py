@@ -37,10 +37,10 @@ class InferenceSection:
         self.options_state = {option: False for option in self.options}
 
         self.setup_ui()
-
         self.results_df = None
         self.inference_thread = None
         self.batch_size = None
+        self.default_k = 5
         self.queue = queue.Queue()
 
     def setup_ui(self):
@@ -87,7 +87,7 @@ class InferenceSection:
         # Batch Size section
         self.batch_size_label = ctk.CTkLabel(self.parameters_frame, text="Batch Size:", font=st.TEXT_FONT)
         self.batch_size_label.grid(row=0, column=0, padx=5, pady=5, sticky="e")
-        self.batch_size_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
+        self.batch_size_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="12", width=50, font=st.TEXT_FONT)
         self.batch_size_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
         # Trustscore options (hidden initially)
@@ -198,9 +198,25 @@ class InferenceSection:
     def get_batch_size(self):
         batch_size_text = self.batch_size_entry.get()
         if not batch_size_text.isdigit() or int(batch_size_text) <= 0:
-            self.communication_section.display_message("Invalid batch size. Using default value of 4.", st.WARNING_COLOR)
-            return 4
+            self.communication_section.display_message("Invalid batch size. Using default value of 12.", st.WARNING_COLOR)
+            return 12
         return int(batch_size_text)
+    
+    def get_trustscore_params(self):
+        distance = self.selected_distance.lower() if self.selected_distance else None  
+        
+        if distance == "k-nearest":
+            k_value = self.k_nearest_frame_entry.get()
+            try:
+                k = int(k_value) if k_value else self.default_k
+                if k <= 0:
+                    k = self.default_k
+            except ValueError:
+                k = self.default_k 
+        else:
+            k = None
+            
+        return distance, k
 
     def run_inference(self):
         model, dataloader, original_data = self.prepare_data(self.batch_size)
@@ -214,7 +230,7 @@ class InferenceSection:
             self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
 
         if self.options_state["Trustscore"]:
-            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader, "k-nearest", 3)
+            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader)
 
         if self.options_state["MC-Dropout"]:
             self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
@@ -251,7 +267,8 @@ class InferenceSection:
     def compute_no_post_hoc_method(self, model, dataloader):
         return methods.no_post_hoc_method(model, dataloader)
 
-    def compute_trustscore(self, model, dataloader, distance, k_nearest):
+    def compute_trustscore(self, model, dataloader):
+        distance, k_nearest = self.get_trustscore_params()
         return methods.trustscore(model, dataloader, distance, k_nearest)
 
     def compute_mc_dropout(self, model, dataloader, num_samples, num_classes, threshold_halting_criterion):
