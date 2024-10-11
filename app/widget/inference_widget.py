@@ -238,7 +238,7 @@ class InferenceSection:
         self.results_df = pd.DataFrame({"Id": test_data['id'], "GT": test_data['label']})
 
         if self.options_state["No post-hoc method"]:
-            self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader)
+            self.results_df['No post-hoc method'], _ = self.compute_no_post_hoc_method(model, dataloader)
 
         if self.options_state["Trustscore"]:
             self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader)

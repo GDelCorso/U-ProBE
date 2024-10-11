@@ -6,17 +6,11 @@ import concurrent.futures
 from threading import Lock
 
 def no_post_hoc_method(model, dataloader):
-    model.eval()
-    inference_results = []
-    
-    with th.no_grad():
-        for batch_features, _, split in dataloader:
-            for feature, split_value in zip(batch_features, split):
-                if split_value == 'test': 
-                    outputs = model(feature.unsqueeze(0)) 
-                    inference_results.extend(np.argmax(outputs, axis=1).cpu().numpy())
-                    
-    return np.array(inference_results)
+
+    df_test = get_split_dataframe(model, dataloader, 'test')
+    predicted = df_test['predicted'].to_numpy()
+
+    return predicted, df_test
 
 def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
     def enable_training_dropout(model):
@@ -76,65 +70,6 @@ def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_crit
     mean_predictions = np.mean(dropout_predictions, axis=0)
     final_predictions = np.argmax(mean_predictions, axis=1)
     return final_predictions
-
-
-# Funzione per generare i DataFrame con i risultati
-def get_dataframe(model, dataloader):
-    model.eval()
-    training_results = []
-    test_results = []
-    
-    # Funzione per calcolare la tabella dei risultati
-    def calculate_results_table(gt_value, predicted, fc_output):
-        row = {
-            'GT': gt_value.item(),
-            'predicted': predicted
-        }
-        
-        # Aggiungi i valori dei nodi del layer fully connected
-        fc_output_values = fc_output.squeeze().tolist()
-        for i, value in enumerate(fc_output_values):
-            row[f'node_{i}'] = value
-        return row
-
-    # Funzione per ottenere l'output del primo layer fully connected
-    def get_fc_output(model, x):
-        for _, module in model.named_modules():
-            if isinstance(module, th.nn.Linear):
-                return module(x)
-        return None
-    
-    with th.no_grad():
-        for batch_features, gt, split in dataloader:
-            for feature, gt_value, split_value in zip(batch_features, gt, split):
-                feature = feature.unsqueeze(0)
-                
-                # Appiattisci l'immagine
-                feature_flat = feature.view(feature.size(0), -1)  
-
-                # Ottieni l'output del fully connected
-                fc_output = get_fc_output(model, feature_flat)
-                if fc_output is not None:
-                    # Ottieni l'output finale del modello
-                    final_output = model(feature_flat)
-                    predicted = th.argmax(final_output, dim=1).item()
-                    
-                    # Usa la funzione esterna per calcolare la riga della tabella
-                    row = calculate_results_table(gt_value, predicted, fc_output)
-                    
-                    # Aggiungi la riga al set di risultati appropriato
-                    if split_value == 'training':
-                        training_results.append(row)
-                    else:
-                        test_results.append(row)
-                else:
-                    break
-    
-    # Crea i DataFrame con i risultati
-    df_training = pd.DataFrame(training_results)
-    df_test = pd.DataFrame(test_results)
-    
-    return df_training, df_test
 
 # Funzione trustscore ridotta
 def trustscore(model, dataloader, distance, k_nearest):
@@ -315,7 +250,7 @@ def trustscore(model, dataloader, distance, k_nearest):
     
 
 
-    df_training, df_test = get_dataframe(model, dataloader)
+    df_training, df_test = get_all_dataframes(model, dataloader)
     
     TrustScore_instance = TrustScore(df_training.drop(columns=['GT', 'predicted']).values, df_training['GT'].values, distance, k_nearest)
 
@@ -343,3 +278,56 @@ def few_shot_learning(model, dataloader, num_samples):
     # Implementazione del Few Shot Learning
     # Per ora, ritorniamo valori casuali
     return np.random.randint(0, 10, num_samples)
+
+def get_fc_output(model, x):
+    for _, module in model.named_modules():
+        if isinstance(module, th.nn.Linear):
+            return module(x)
+    return None
+
+def calculate_results_row(gt_value, predicted, fc_output):
+    row = {
+        'GT': gt_value.item(),
+        'predicted': predicted
+    }
+    
+    # Aggiungi i valori dei nodi del layer fully connected
+    fc_output_values = fc_output.squeeze().tolist()
+    for i, value in enumerate(fc_output_values):
+        row[f'node_{i}'] = value
+    
+    return row
+
+def process_batch(model, feature, gt_value):
+    feature = feature.unsqueeze(0)
+    feature_flat = feature.view(feature.size(0), -1)
+    
+    # Ottieni l'output del fully connected
+    fc_output = get_fc_output(model, feature_flat)
+    if fc_output is not None:
+        # Ottieni l'output finale del modello
+        final_output = model(feature_flat)
+        predicted = th.argmax(final_output, dim=1).item()
+        
+        # Calcola la riga dei risultati
+        return calculate_results_row(gt_value, predicted, fc_output)
+    return None
+
+def get_split_dataframe(model, dataloader, target_split='test'):
+    model.eval()
+    results = []
+    
+    with th.no_grad():
+        for batch_features, gt, split in dataloader:
+            for feature, gt_value, split_value in zip(batch_features, gt, split):
+                if split_value == target_split:
+                    row = process_batch(model, feature, gt_value)
+                    if row is not None:
+                        results.append(row)
+    
+    return pd.DataFrame(results)
+
+def get_all_dataframes(model, dataloader):
+    df_training = get_split_dataframe(model, dataloader, 'training')
+    df_test = get_split_dataframe(model, dataloader, 'test')
+    return df_training, df_test
