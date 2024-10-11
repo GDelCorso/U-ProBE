@@ -4,7 +4,6 @@ import pandas as pd
 import os
 import torch as th
 from torch.utils.data import DataLoader
-import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import methods
 from config import AppStyles as st
@@ -40,6 +39,7 @@ class InferenceSection:
         self.results_df = None
         self.inference_thread = None
         self.batch_size = None
+        self.selected_distance = "Nearest"
         self.default_k = 5
         self.queue = queue.Queue()
 
@@ -102,7 +102,7 @@ class InferenceSection:
         
         # K-nearest options (hidden initially)
         self.k_nearest_label = ctk.CTkLabel(self.parameters_frame, text="K:", font=st.TEXT_FONT)
-        self.k_nearest_frame_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="4", width=50, font=st.TEXT_FONT)
+        self.k_nearest_frame_entry = ctk.CTkEntry(self.parameters_frame, placeholder_text="5", width=50, font=st.TEXT_FONT)
 
         # Hide Trustscore options initially
         self.toggle_trustscore_options(visible=False)
@@ -135,7 +135,18 @@ class InferenceSection:
     def update_option_state(self, option):
         self.options_state[option] = not self.options_state[option]
         
-        # Show/Hide Trustscore options
+        if option != "No post-hoc method":
+            if self.options_state[option]:
+                if not self.options_state["No post-hoc method"]:
+                    self.options_state["No post-hoc method"] = True
+                    self.checkboxes["No post-hoc method"].select()
+        else:
+            if not self.options_state["No post-hoc method"]:
+                for opt in self.options:
+                    if opt != "No post-hoc method":
+                        self.options_state[opt] = False
+                        self.checkboxes[opt].deselect()
+        
         if option == "Trustscore":
             self.toggle_trustscore_options(visible=self.options_state[option])
             if not self.options_state[option]:
@@ -185,7 +196,7 @@ class InferenceSection:
         if self.batch_size is None:
             return False
 
-        if not self.import_section.get_model_file or not self.import_section.get_data_file or not self.import_section.get_dataset_file or not self.import_section.get_modelclass_file:
+        if not self.import_section.get_model_file() or not self.import_section.get_data_file() or not self.import_section.get_dataset_file() or not self.import_section.get_modelclass_file():
             self.communication_section.display_message("Please ensure all required files are imported before running inference.", st.ERROR_COLOR)
             return False
 
@@ -294,12 +305,8 @@ class InferenceSection:
         
 
     def update_table(self):
-        results_to_table = []
-        for method in self.options:
-            get_stats = self.get_stats(method)
-            results_to_table.append(get_stats)
-        
-        self.results_table.update_table(results_to_table, 'classification')
+        # Refactor the code to update the table with the results
+        pass
         
     def calculate_statistics(self):
         if self.results_df is None or self.results_df.empty:
@@ -308,16 +315,14 @@ class InferenceSection:
         ground_truth = self.results_df['GT']
         self.stats = {}
         
-        for column in self.results_df.columns:
-            if column not in ['Id', 'GT']:
-                predictions = self.results_df[column]
-                self.stats[column] = {
-                    'accuracy': accuracy_score(ground_truth, predictions),
-                    'precision': precision_score(ground_truth, predictions, average='weighted', zero_division=0),
-                    'recall': recall_score(ground_truth, predictions, average='weighted', zero_division=0),
-                    'f1_score': f1_score(ground_truth, predictions, average='weighted', zero_division=0)
-                }
-                
+        if "No post-hoc method" in self.results_df.columns:
+            predictions = self.results_df["No post-hoc method"]
+            self.stats["No post-hoc method"] = {
+                'accuracy': accuracy_score(ground_truth, predictions),
+                'precision': precision_score(ground_truth, predictions, average='weighted', zero_division=0),
+                'recall': recall_score(ground_truth, predictions, average='weighted', zero_division=0),
+                'f1_score': f1_score(ground_truth, predictions, average='weighted', zero_division=0)
+            }
 
     def export_results(self):
         if self.results_df is None or self.results_df.empty or not self.stats:

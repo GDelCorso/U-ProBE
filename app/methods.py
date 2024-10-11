@@ -160,14 +160,17 @@ def trustscore(model, dataloader, distance, k_nearest):
             
 
 
-        def TrustScore(self, feature_prediction):
+        def TrustScore(self, feature_prediction, class_prediction=None):
             
             feature_prediction = list(feature_prediction)
             
-            predicted_score = {}
-            for val_class in self.indices_class:
-                predicted_score[val_class] = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, feature_prediction, val_class, self.distance, self.k_nearest)
-            
+            if class_prediction!=None:
+                predicted_score = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, feature_prediction, class_prediction, self.distance, self.k_nearest)
+            else:
+                predicted_score = {}
+                for val_class in self.indices_class:
+                    predicted_score[val_class] = fun_TrustScore(self.alpha_reference_data, self.alpha_correct_class, feature_prediction, val_class, self.distance, self.k_nearest)
+                    
             return predicted_score
 
 
@@ -204,22 +207,16 @@ def trustscore(model, dataloader, distance, k_nearest):
         try:
             predicted_class_index = class_type.index(class_prediction)
         except ValueError:
-            return 0.0
+            return float(0.0)
         
         distance_coincident = dist_h_set[predicted_class_index]
         
         dist_h_set.pop(predicted_class_index)
         
         if not dist_h_set: 
-            return 0.0
+            return float(0.0)
             
         distance_not_coincident = min(dist_h_set)
-        
-        if distance_coincident == 0:
-            if distance_not_coincident == 0:
-                return 1.0
-            else:
-                return float('inf')
         
         epsilon = np.finfo(float).eps 
         trust_score = distance_not_coincident / (distance_coincident + epsilon)
@@ -229,10 +226,9 @@ def trustscore(model, dataloader, distance, k_nearest):
     # Nearest neighbour distance:
     # The minimum among the euclidean distances
     def fun_distance_nearest(reference_set, x_test):
-        import numpy as np
         
         if not reference_set:  # Check if reference set is empty
-            return float('inf')  # Return infinity if no references available
+            return np.nan
         
         distances_list = []
         
@@ -248,8 +244,6 @@ def trustscore(model, dataloader, distance, k_nearest):
     # K nearest 
     # The average of the k nearest elements
     def fun_distance_k_nearest(reference_set, x_test, k):
-        import numpy as np
-        
         
         # Definiamo una lista di distanze:
         distances_list = []
@@ -264,11 +258,6 @@ def trustscore(model, dataloader, distance, k_nearest):
             # Effettuiamo la radice:
             distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
 
-        # Warning su k:
-        if k>len(reference_set):
-            print("\nWARNING: k > size of the classified dataset. Set up k = the size.")
-            k = len(reference_set)
-        
         
         # Si crea una lista con le k distanze più vicine:
         k_distances_list= []
@@ -281,7 +270,6 @@ def trustscore(model, dataloader, distance, k_nearest):
 
     # The average among the euclidean distances
     def fun_distance_average(reference_set,x_test):
-        import numpy as np
         
         # Definiamo una lista di distanze:
         distances_list = []
@@ -301,7 +289,6 @@ def trustscore(model, dataloader, distance, k_nearest):
 
     # Distanza centroide. Ricava il centroide (la media su ciascuna feature) del gruppo e poi calcola la distanza da quel punto
     def fun_distance_centroid(reference_set, x_test):
-        import numpy as np
         
         # Find the centroid
         centroid_features = []
@@ -335,11 +322,10 @@ def trustscore(model, dataloader, distance, k_nearest):
     trust_scores = []
     for i in range(len(df_test)):
         feature_prediction = df_test.drop(columns=['GT', 'predicted']).iloc[i].values
-        trust_score = TrustScore_instance.TrustScore(feature_prediction)
+        trust_score = TrustScore_instance.TrustScore(feature_prediction, df_test['predicted'].iloc[i])
         trust_scores.append(trust_score)
         
-    trust_scores_max = np.array([max(score, key=score.get) for score in trust_scores])
-    return trust_scores_max
+    return np.array(trust_scores)
         
     
 
