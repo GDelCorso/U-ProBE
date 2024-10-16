@@ -39,6 +39,7 @@ class InferenceSection:
         self.results_df = None
         self.inference_thread = None
         self.batch_size = None
+        self.reference_df = None
         self.selected_distance = "Nearest"
         self.default_k = 5
         self.queue = queue.Queue()
@@ -238,13 +239,13 @@ class InferenceSection:
         self.results_df = pd.DataFrame({"Id": test_data['id'], "GT": test_data['label']})
 
         if self.options_state["No post-hoc method"]:
-            self.results_df['No post-hoc method'], _ = self.compute_no_post_hoc_method(model, dataloader)
+            self.results_df['No post-hoc method'], self.reference_df = self.compute_no_post_hoc_method(model, dataloader)
 
         if self.options_state["Trustscore"]:
-            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader)
+            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader, self.reference_df)
 
         if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
+            self.results_df['MC-Dropout Score'] , self.results_df['MC-Dropout Prediction'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.results_df['No post-hoc method'], self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
 
         if self.options_state["Topological data analysis"]:
             self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(test_data))
@@ -278,12 +279,12 @@ class InferenceSection:
     def compute_no_post_hoc_method(self, model, dataloader):
         return methods.no_post_hoc_method(model, dataloader)
 
-    def compute_trustscore(self, model, dataloader):
+    def compute_trustscore(self, model, dataloader, reference_df):
         distance, k_nearest = self.get_trustscore_params()
-        return methods.trustscore(model, dataloader, distance, k_nearest)
+        return methods.trustscore(model, dataloader, reference_df, distance, k_nearest)
 
-    def compute_mc_dropout(self, model, dataloader, num_samples, num_classes, threshold_halting_criterion):
-        return methods.mc_dropout(model, dataloader, num_samples, num_classes, threshold_halting_criterion)
+    def compute_mc_dropout(self, model, dataloader, num_samples, no_post_hoc_method_results, num_classes, threshold_halting_criterion):
+        return methods.mc_dropout(model, dataloader, num_samples, num_classes, no_post_hoc_method_results, threshold_halting_criterion)
 
     def compute_topological_data_analysis(self, model, dataloader, num_samples):
         return methods.topological_data_analysis(model, dataloader, num_samples)

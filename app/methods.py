@@ -12,12 +12,14 @@ def no_post_hoc_method(model, dataloader):
 
     return predicted, df_test
 
-def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
+def mc_dropout(model, dataloader, num_samples, n_classes, no_post_hoc_method_results, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
     def enable_training_dropout(model):
         for m in model.modules():
             if isinstance(m, nn.Dropout):
                 m.train()
 
+    if no_post_hoc_method_results is None:
+        return None, None
 
     if not threshold_halting_criterion:
         threshold_halting_criterion = 0.001
@@ -64,15 +66,19 @@ def mc_dropout(model, dataloader, num_samples, n_classes, threshold_halting_crit
             if fp > 1 and fp % 5 == 0: 
                 halting_criterion = calculate_halting_criterion(dropout_predictions)
                 if halting_criterion < threshold_halting_criterion:
-                    print(f"Early stopping at forward pass {fp + 1}")
                     break
 
     mean_predictions = np.mean(dropout_predictions, axis=0)
+    
+    target_class_values = np.array([mean_predictions[i, no_post_hoc_method_results[i]] for i in range(len(no_post_hoc_method_results))])    
+    
     final_predictions = np.argmax(mean_predictions, axis=1)
-    return final_predictions
+    
+    
+    return target_class_values, final_predictions
 
 # Funzione trustscore ridotta
-def trustscore(model, dataloader, distance, k_nearest):
+def trustscore(model, dataloader, reference_df, distance, k_nearest):
     class TrustScore:
         # Inizializzazione classe
         def __init__(self, reference_data, correct_class, distance, k_nearest):
@@ -249,15 +255,14 @@ def trustscore(model, dataloader, distance, k_nearest):
         return centroid_distance  
     
 
-
-    df_training, df_test = get_all_dataframes(model, dataloader)
-    
-    TrustScore_instance = TrustScore(df_training.drop(columns=['GT', 'predicted']).values, df_training['GT'].values, distance, k_nearest)
+    df_training = get_split_dataframe(model, dataloader, 'training')
+        
+    TrustScore_instance = TrustScore(df_training.drop(columns=['GT', 'predicted']).values, reference_df['GT'].values, distance, k_nearest)
 
     trust_scores = []
-    for i in range(len(df_test)):
-        feature_prediction = df_test.drop(columns=['GT', 'predicted']).iloc[i].values
-        trust_score = TrustScore_instance.TrustScore(feature_prediction, df_test['predicted'].iloc[i])
+    for i in range(len(reference_df)):
+        feature_prediction = reference_df.drop(columns=['GT', 'predicted']).iloc[i].values
+        trust_score = TrustScore_instance.TrustScore(feature_prediction, reference_df['predicted'].iloc[i])
         trust_scores.append(trust_score)
         
     return np.array(trust_scores)
