@@ -1,3 +1,5 @@
+from widget.dialog.error_dialog import ErrorDialog 
+
 import customtkinter as ctk
 from tkinter import filedialog as fd
 import pandas as pd
@@ -9,12 +11,13 @@ import methods
 from config import AppStyles as st
 import threading
 import queue
+import traceback
 
 class InferenceSection:
-    def __init__(self, master, import_section, results_table, communication_section):
+    def __init__(self, master, import_section, model_evaluation_section, communication_section):
         self.master = master
         self.import_section = import_section
-        self.results_table = results_table
+        self.model_evaluation_section = model_evaluation_section
         self.communication_section = communication_section
 
         self.options = [
@@ -40,6 +43,7 @@ class InferenceSection:
         self.inference_thread = None
         self.batch_size = None
         self.reference_df = None
+        self.num_tests = None
         self.selected_distance = "Nearest"
         self.default_k = 5
         self.queue = queue.Queue()
@@ -59,7 +63,7 @@ class InferenceSection:
 
     def create_inference_widgets(self):
         self.checkbox_frame = ctk.CTkFrame(self.frame)
-        self.checkbox_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=(5, 10), sticky="nsew")
+        self.checkbox_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky="nsew")  
 
         num_columns = 3
         self.checkboxes = {}
@@ -113,6 +117,7 @@ class InferenceSection:
         self.inference_button.grid(row=3, column=0, pady=5, padx=5, sticky="ew")
         self.export_button = ctk.CTkButton(self.frame, text="Export .csv", command=self.export_results, font=st.BUTTON_FONT)
         self.export_button.grid(row=3, column=2, pady=5, padx=5, sticky="ew")
+
 
     def toggle_trustscore_options(self, visible):
         if visible:
@@ -175,7 +180,8 @@ class InferenceSection:
             self.run_inference()
             self.queue.put(("success", "Inference completed successfully. Results have been generated."))
         except Exception as e:
-            self.queue.put(("error", f"An error occurred during inference: {str(e)}"))
+            error_message = f"An error occurred during inference: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            self.queue.put(("error", error_message))
 
     def check_inference_progress(self):
         try:
@@ -183,29 +189,38 @@ class InferenceSection:
             if message_type == "success":
                 self.communication_section.display_message(message, st.COMUNICATION_COLOR)
             elif message_type == "error":
-                self.communication_section.display_message(message, st.ERROR_COLOR)
+                self.show_error_dialog(message)
             
             self.communication_section.stop_progress()
             self.inference_button.configure(state="normal")
         except queue.Empty:
             self.master.after(100, self.check_inference_progress)
 
+    def show_error_dialog(self, error_message):
+        ErrorDialog(self.master, error_message)
+
+        self.communication_section.display_message("An error occurred during inference. Check the error dialog for details.", st.ERROR_COLOR)
+
     def validate_inputs(self):
-        
-        self.batch_size = self.get_batch_size()
-        
-        if self.batch_size is None:
-            return False
+        try:
+            self.batch_size = self.get_batch_size()
+            
+            if self.batch_size is None:
+                raise ValueError("Invalid batch size")
 
-        if not self.import_section.get_model_file() or not self.import_section.get_data_file() or not self.import_section.get_dataset_file() or not self.import_section.get_modelclass_file():
-            self.communication_section.display_message("Please ensure all required files are imported before running inference.", st.ERROR_COLOR)
-            return False
+            if not all([self.import_section.get_model_file(),
+                        self.import_section.get_data_file(),
+                        self.import_section.get_dataset_file(),
+                        self.import_section.get_modelclass_file()]):
+                raise ValueError("Please ensure all required files are imported before running inference.")
 
-        if not any(self.options_state.values()):
-            self.communication_section.display_message("Please select at least one method before running inference.", st.ERROR_COLOR)
-            return False
+            if not any(self.options_state.values()):
+                raise ValueError("Please select at least one method before running inference.")
 
-        return True
+            return True
+        except ValueError as e:
+            self.communication_section.display_message(str(e), st.ERROR_COLOR)
+            return False
 
     def get_batch_size(self):
         batch_size_text = self.batch_size_entry.get()
@@ -239,7 +254,7 @@ class InferenceSection:
         self.results_df = pd.DataFrame({"Id": test_data['id'], "GT": test_data['label']})
 
         if self.options_state["No post-hoc method"]:
-            self.results_df['No post-hoc method'], self.reference_df = self.compute_no_post_hoc_method(model, dataloader)
+            self.results_df['No post-hoc method'], self.reference_df, self.num_tests = self.compute_no_post_hoc_method(model, dataloader)
 
         if self.options_state["Trustscore"]:
             self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader, self.reference_df)
@@ -257,7 +272,7 @@ class InferenceSection:
             self.results_df['Few shot learning'] = self.compute_few_shot_learning(model, dataloader, len(test_data))
 
         self.calculate_statistics()
-        self.update_table()
+        self.update_model_evaluation_section()
 
     def prepare_data(self, batch_size):
         model_file = self.import_section.get_model_file()
@@ -305,9 +320,8 @@ class InferenceSection:
         return ["N/A", "N/A"]
         
 
-    def update_table(self):
-        # Refactor the code to update the table with the results
-        pass
+    def update_model_evaluation_section(self):
+        self.model_evaluation_section.update_stats(self.results_df, self.stats)
         
     def calculate_statistics(self):
         if self.results_df is None or self.results_df.empty:
