@@ -6,11 +6,11 @@ import concurrent.futures
 from threading import Lock
 
 def no_post_hoc_method(model, dataloader):
-
     df_test = get_split_dataframe(model, dataloader, 'test')
     predicted = df_test['predicted'].to_numpy()
-
-    return predicted, df_test
+    num_tests = len(df_test)
+    
+    return predicted, df_test, num_tests
 
 def mc_dropout(model, dataloader, num_samples, n_classes, no_post_hoc_method_results, threshold_halting_criterion, max_forward_passes=1000, num_threads=4):
     def enable_training_dropout(model):
@@ -25,6 +25,9 @@ def mc_dropout(model, dataloader, num_samples, n_classes, no_post_hoc_method_res
         threshold_halting_criterion = 0.001
     dropout_predictions = np.empty((0, num_samples, n_classes))
     lock = Lock()
+    
+    unique_classes = sorted(set(no_post_hoc_method_results))
+    class_to_index = {cls: idx for idx, cls in enumerate(unique_classes)}
 
     def process_forward_pass():
         predictions = np.empty((0, n_classes))
@@ -70,10 +73,9 @@ def mc_dropout(model, dataloader, num_samples, n_classes, no_post_hoc_method_res
 
     mean_predictions = np.mean(dropout_predictions, axis=0)
     
-    target_class_values = np.array([mean_predictions[i, no_post_hoc_method_results[i]] for i in range(len(no_post_hoc_method_results))])    
+    target_class_values = np.array([mean_predictions[i, class_to_index[target_class]] for i, target_class in enumerate(no_post_hoc_method_results)])
     
     final_predictions = np.argmax(mean_predictions, axis=1)
-    
     
     return target_class_values, final_predictions
 
