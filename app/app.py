@@ -12,7 +12,7 @@ class App(ctk.CTk):
 
         # Window title and size
         self.title("U-ProBE")
-        self.geometry("1024x600")
+        self.geometry("1280x720")
 
         # Set application icon
         icon_path = os.path.join(os.path.dirname(__file__), "../assets/icon.ico")
@@ -26,7 +26,8 @@ class App(ctk.CTk):
         self.inference_page = UprobePage(self)
         self.inference_page.frame.grid(row=0, column=0, sticky="nsew")
         
-        self.minsize(720, 420)
+        # Set the minimum window size
+        self.minsize(800, 600)
         
         # Bring the window to the front
         self.lift()

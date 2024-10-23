@@ -14,11 +14,12 @@ import queue
 import traceback
 
 class InferenceSection:
-    def __init__(self, master, import_section, model_evaluation_section, communication_section):
+    def __init__(self, master, import_section, model_evaluation_section, communication_section, plot_section):
         self.master = master
         self.import_section = import_section
         self.model_evaluation_section = model_evaluation_section
         self.communication_section = communication_section
+        self.plot_section = plot_section
 
         self.options = [
             "No post-hoc method",
@@ -273,6 +274,7 @@ class InferenceSection:
 
         self.calculate_statistics()
         self.update_model_evaluation_section()
+        self.update_plot_section()
 
     def prepare_data(self, batch_size):
         model_file = self.import_section.get_model_file()
@@ -322,6 +324,9 @@ class InferenceSection:
 
     def update_model_evaluation_section(self):
         self.model_evaluation_section.update_stats(self.results_df, self.stats)
+        
+    def update_plot_section(self):
+        self.plot_section.update_plot(self.results_df)
         
     def calculate_statistics(self):
         if self.results_df is None or self.results_df.empty:
