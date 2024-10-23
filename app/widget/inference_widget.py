@@ -226,7 +226,6 @@ class InferenceSection:
     def get_batch_size(self):
         batch_size_text = self.batch_size_entry.get()
         if not batch_size_text.isdigit() or int(batch_size_text) <= 0:
-            self.communication_section.display_message("Invalid batch size. Using default value of 12.", st.WARNING_COLOR)
             return 12
         return int(batch_size_text)
     
