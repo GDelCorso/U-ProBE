@@ -23,7 +23,7 @@
 To get started, clone the repository to your local machine:
 
 ```bash
-    git clone https://github.com/yourusername/U-ProBE.git
+    git clone https://github.com/lorenzobandini/U-ProBE.git
     cd U-ProBE
 ```
 
