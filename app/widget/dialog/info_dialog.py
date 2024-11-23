@@ -25,7 +25,7 @@ class InfoDialog(ctk.CTkToplevel):
             font=st.HEADER_FONT,  # Un font più grande per il titolo
             justify="center"
         )
-        self.page_title.pack(padx=10, pady=(10, 20), anchor="n")  # Margine superiore più grande per il titolo
+        self.page_title.pack(padx=10, pady=(10, 20), anchor="n")
         
         # Frame scrollabile per la prima sezione: "What the application do"
         self.what_scroll_frame = ctk.CTkScrollableFrame(self.main_frame, width=550, height=180)
@@ -43,7 +43,7 @@ class InfoDialog(ctk.CTkToplevel):
         # Contenuto della prima sezione
         self.what_content = ctk.CTkLabel(
             self.what_scroll_frame,
-            text="[Inserisci qui la descrizione dell'applicazione...]",  # Personalizza questo testo
+            text="U-ProBE is a desktop application that makes it easy to apply post-hoc techniques—non-intrusive methods that operate on the inference of neural networks and provide data related to the uncertainty of results—on PyTorch image classification models. Developed by Lorenzo Bandini and still under development. Code contributions can be made at https://github.com/lorenzobandini/U-ProBE.",
             font=st.TEXT_FONT,
             wraplength=520,
             justify="left"
@@ -66,14 +66,14 @@ class InfoDialog(ctk.CTkToplevel):
         # Contenuto della seconda sezione
         self.how_content = ctk.CTkLabel(
             self.how_scroll_frame,
-            text="[Inserisci qui le istruzioni d'uso...]",  # Personalizza questo testo
+            text="To use the application, prepare the input data: specifically, the model must be in `.pt` format with the weights included. You must also provide the model class renamed to **`CustomModel`**, which defines its structure, a dataloader for preprocessing the data renamed to **`CustomLoader`**, and a dataset in `.csv` format that must include columns for **`id`** and **`split`** (indicating the data type: training/testing). After loading the model class, it is possible to visualize the network structure through the designated button. Once all inputs are loaded, you can proceed with inference by selecting the techniques you wish to apply.  Upon completing the inference, a brief summary of the model and its statistics will be displayed along with a chart showing its performance. If you wish to use the obtained data for other purposes, you can export it in `.csv` format using the corresponding button.",
             font=st.TEXT_FONT,
             wraplength=520,
             justify="left"
         )
         self.how_content.pack(padx=10, pady=(0,15), anchor="w")
         
-        # Bottone "Close" (leggermente più vicino al fondo)
+        # Bottone "Close"
         self.ok_button = ctk.CTkButton(
             self.main_frame,
             text="Close",

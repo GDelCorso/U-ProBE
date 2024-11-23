@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from config import AppStyles as st
 import os
-from PIL import Image  # Importa PIL per caricare l'immagine PNG
+from PIL import Image
 from widget.dialog.info_dialog import InfoDialog
 
 class CommunicationSection:

@@ -83,7 +83,7 @@ class ImageDialog(ctk.CTkToplevel):
                 text="Insert input shape to visualize model",
                 font=st.HEADER_FONT,
                 width=400,
-                height=200  # Reduced height
+                height=200
             )
             self.image_label.grid(row=0, column=0, padx=10, pady=(5,0), sticky="nsew")
 
@@ -124,7 +124,7 @@ class ImageDialog(ctk.CTkToplevel):
         self.threshhold_threshhold_halting_criterion_frame.grid(row=0, column=2, padx=10, pady=2, sticky="e")
 
         # Halting criterion label and input
-        self.threshhold_halting_label = ctk.CTkLabel(self.threshhold_threshhold_halting_criterion_frame, text="Threshhold Halting Criterion:", font=st.TEXT_FONT)
+        self.threshhold_halting_label = ctk.CTkLabel(self.threshhold_threshhold_halting_criterion_frame, text="Threshold Halting Criterion:", font=st.TEXT_FONT)
         self.threshhold_halting_label.grid(row=0, column=0, padx=(5, 5), pady=2, sticky="w")
         
         self.threshhold_halting_entry = ctk.CTkEntry(self.threshhold_threshhold_halting_criterion_frame, width=60)
