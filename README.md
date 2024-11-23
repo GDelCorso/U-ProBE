@@ -1,20 +1,25 @@
 # U-ProBE
 
+![U-ProBE Cover](U-ProBE_Home.png)
+
 ## Overview
 
-**U-ProBE** (Uncertainty Prediction for Bayesian Estimations) is a Python software suite designed for analyzing deep learning models with uncertainty in predictions. Specifically, it focuses on medical image processing, including MRI and ultrasound images. The goal of this project is to develop a platform with a user-friendly interface that allows users to apply state-of-the-art techniques to evaluate the reliability of models through non-intrusive methodologies such as Bayesian Dropout, Deep Ensembling, and Trust Score.
+**U-ProBE** (Uncertainty Prediction for Bayesian Estimations) is a Python software suite designed for analyzing deep learning models with uncertainty in predictions. Specifically, it focuses on medical image processing, including MRI and ultrasound images. The goal of this project is to develop a platform with a user-friendly interface that allows users to apply state-of-the-art techniques to evaluate the reliability of models through non-intrusive methodologies.
 
 ## Features
 
 - **User Interface:** Built with CustomTkinter for an intuitive and interactive user experience.
+- **DL Framework** - **DL Framework** Supports PyTorch models, used for maximum operability.
 - **Inference Methods:** Supports various post-hoc methods to assess model reliability:
   - Trustscore
   - MC Dropout
-  - Topological Data Analysis
-  - Deep Ensembling
-  - Few-Shot Learning
+  - Topological Data Analysis (TODO)
+  - Deep Ensembling (TODO)
+  - Few-Shot Learning (TODO)
 - **File Handling:** Easily import model files, data loaders, and datasets.
 - **Results Export:** Export inference results to CSV files for further analysis.
+- **Neural Network Visualization** Easy visualization of the neural network architecture with the library VisualTorch.
+- **Model Evaluation Metrics** Calculate the performance metrics of the model, such as accuracy, precision, recall, and F1 score.
 
 ## Installation
 
