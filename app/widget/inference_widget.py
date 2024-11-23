@@ -34,7 +34,7 @@ class InferenceSection:
             "Nearest",
             "Average",
             "Centroid",
-            "K-Nearest",            
+            "K-Nearest",
         ]
         
         self.options_state = {option: False for option in self.options}
@@ -153,6 +153,7 @@ class InferenceSection:
                     if opt != "No post-hoc method":
                         self.options_state[opt] = False
                         self.checkboxes[opt].deselect()
+                self.toggle_trustscore_options(visible=False)
         
         if option == "Trustscore":
             self.toggle_trustscore_options(visible=self.options_state[option])
@@ -253,26 +254,33 @@ class InferenceSection:
         # Crea il DataFrame per i risultati dei test
         self.results_df = pd.DataFrame({"Id": test_data['id'], "GT": test_data['label']})
 
-        if self.options_state["No post-hoc method"]:
-            self.results_df['No post-hoc method'], self.reference_df, self.num_tests = self.compute_no_post_hoc_method(model, dataloader)
+        if self.options_state["No post-hoc method"] and not self.options_state["Trustscore"] and not self.options_state["MC-Dropout"] and not self.options_state["Topological data analysis"] and not self.options_state["Ensemble"] and not self.options_state["Few shot learning"]:
+            self.results_df['No post-hoc method'] = self.compute_no_post_hoc_method(model, dataloader) 
+        else:
+            if self.options_state["No post-hoc method"]:
+                self.results_df['No post-hoc method'], self.reference_df, self.num_tests = self.compute_no_post_hoc_method_with_dataframe(model, dataloader)
 
-        if self.options_state["Trustscore"]:
-            self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader, self.reference_df)
+            if self.options_state["Trustscore"]:
+                self.results_df['Trustscore'] = self.compute_trustscore(model, dataloader, self.reference_df)
 
-        if self.options_state["MC-Dropout"]:
-            self.results_df['MC-Dropout Score'] , self.results_df['MC-Dropout Prediction'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.results_df['No post-hoc method'], self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
+            if self.options_state["MC-Dropout"]:
+                self.results_df['MC-Dropout Score'] , self.results_df['MC-Dropout Prediction'] = self.compute_mc_dropout(model, dataloader, len(test_data), self.results_df['No post-hoc method'], self.import_section.get_num_classes(), self.import_section.get_threshold_halting_criterion())
 
-        if self.options_state["Topological data analysis"]:
-            self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(test_data))
+            if self.options_state["Topological data analysis"]:
+                self.results_df['Topological data analysis'] = self.compute_topological_data_analysis(model, dataloader, len(test_data))
 
-        if self.options_state["Ensemble"]:
-            self.results_df['Ensemble'] = self.compute_ensemble(model, dataloader, len(test_data))
+            if self.options_state["Ensemble"]:
+                self.results_df['Ensemble'] = self.compute_ensemble(model, dataloader, len(test_data))
 
-        if self.options_state["Few shot learning"]:
-            self.results_df['Few shot learning'] = self.compute_few_shot_learning(model, dataloader, len(test_data))
+            if self.options_state["Few shot learning"]:
+                self.results_df['Few shot learning'] = self.compute_few_shot_learning(model, dataloader, len(test_data))
 
         self.calculate_statistics()
+        
+        self.reset_model_evaluation_section()
         self.update_model_evaluation_section()
+        
+        self.reset_plot_section()
         self.update_plot_section()
 
     def prepare_data(self, batch_size):
@@ -294,6 +302,9 @@ class InferenceSection:
 
     def compute_no_post_hoc_method(self, model, dataloader):
         return methods.no_post_hoc_method(model, dataloader)
+    
+    def compute_no_post_hoc_method_with_dataframe(self, model, dataloader):
+        return methods.no_post_hoc_method_with_dataframe(model, dataloader)
 
     def compute_trustscore(self, model, dataloader, reference_df):
         distance, k_nearest = self.get_trustscore_params()
@@ -321,8 +332,14 @@ class InferenceSection:
         return ["N/A", "N/A"]
         
 
+    def reset_model_evaluation_section(self):
+        self.model_evaluation_section.reset_stats()
+
     def update_model_evaluation_section(self):
         self.model_evaluation_section.update_stats(self.results_df, self.stats)
+        
+    def reset_plot_section(self):
+        self.plot_section.clear_plot()
         
     def update_plot_section(self):
         self.plot_section.update_plot(self.results_df)

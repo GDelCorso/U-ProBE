@@ -6,6 +6,19 @@ import concurrent.futures
 from threading import Lock
 
 def no_post_hoc_method(model, dataloader):
+    model.eval()
+    inference_results = []
+    
+    with th.no_grad():
+        for batch_features, _, split in dataloader:
+            for feature, split_value in zip(batch_features, split):
+                if split_value == 'test': 
+                    outputs = model(feature.unsqueeze(0)) 
+                    inference_results.extend(np.argmax(outputs, axis=1).cpu().numpy())
+                    
+    return np.array(inference_results)
+
+def no_post_hoc_method_with_dataframe(model, dataloader):
     df_test = get_split_dataframe(model, dataloader, 'test')
     predicted = df_test['predicted'].to_numpy()
     num_tests = len(df_test)
@@ -79,10 +92,8 @@ def mc_dropout(model, dataloader, num_samples, n_classes, no_post_hoc_method_res
     
     return target_class_values, final_predictions
 
-# Funzione trustscore ridotta
 def trustscore(model, dataloader, reference_df, distance, k_nearest):
     class TrustScore:
-        # Inizializzazione classe
         def __init__(self, reference_data, correct_class, distance, k_nearest):
             self.reference_data = list(reference_data)
             self.correct_class = list(correct_class)
@@ -124,7 +135,6 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         
         list_h_set = []
         
-        # Prepare reference sets for each class
         for i_class in range(0, number_class):
             list_h_set.append([])
             for i, val in enumerate(alpha_correct_class):
@@ -133,7 +143,6 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         
         dist_h_set = []
         
-        # Calculate distances based on chosen method
         if distance == "nearest":
             for i_class in range(0, number_class):
                 dist_h_set.append(fun_distance_nearest(list_h_set[i_class], feature_prediction))
@@ -166,11 +175,9 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         
         return float(trust_score)
     
-    # Nearest neighbour distance:
-    # The minimum among the euclidean distances
     def fun_distance_nearest(reference_set, x_test):
         
-        if not reference_set:  # Check if reference set is empty
+        if not reference_set:
             return np.nan
         
         distances_list = []
@@ -184,25 +191,18 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         
         return min(distances_list)
         
-    # K nearest 
-    # The average of the k nearest elements
     def fun_distance_k_nearest(reference_set, x_test, k):
         
-        # Definiamo una lista di distanze:
         distances_list = []
         
-        # Scorriamo la lista delle reference:
         for i_temp, val in enumerate(reference_set):
-            # Scorriamo sul numero di features e definiamo la  distanza.
             distances_list.append(0)
-            for j_temp, val_feature in enumerate(val):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+            for j_temp, val_feature in enumerate(val):
                 distances_list[i_temp] += (val_feature-x_test[j_temp])**2
             
-            # Effettuiamo la radice:
             distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
 
         
-        # Si crea una lista con le k distanze più vicine:
         k_distances_list= []
         for i in range(0,k):
             k_distances_list.append(min(distances_list))
@@ -211,29 +211,22 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         return np.mean(k_distances_list)  
 
 
-    # The average among the euclidean distances
     def fun_distance_average(reference_set,x_test):
         
-        # Definiamo una lista di distanze:
         distances_list = []
         
-        # Scorriamo la lista delle reference:
         for i_temp, val in enumerate(reference_set):
-            # Scorriamo sul numero di features e definiamo la  distanza.
             distances_list.append(0)
-            for j_temp, val_feature in enumerate(val):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+            for j_temp, val_feature in enumerate(val):
                 distances_list[i_temp] += (val_feature-x_test[j_temp])**2
             
-            # Effettuiamo la radice:
             distances_list[i_temp] = np.sqrt(distances_list[i_temp])    
 
         return np.mean(distances_list)
 
 
-    # Distanza centroide. Ricava il centroide (la media su ciascuna feature) del gruppo e poi calcola la distanza da quel punto
     def fun_distance_centroid(reference_set, x_test):
         
-        # Find the centroid
         centroid_features = []
         
         n_features = len(x_test)
@@ -241,16 +234,14 @@ def trustscore(model, dataloader, reference_df, distance, k_nearest):
         for i_features in range(0, n_features):
             centroid_features.append(0)
             
-            # Popoliamolo calcolando la media:
             i_ref = -1
             for i_ref, val in enumerate(reference_set):
                 centroid_features[i_features] += val[i_features]
             
-            centroid_features[i_features] = centroid_features[i_features]/(i_ref+1) # Facciamo la media
+            centroid_features[i_features] = centroid_features[i_features]/(i_ref+1)
             
-        # La distanza per il trust score è calcolata come la distanza dal centroide:
         centroid_distance = 0
-        for j_temp, val_feature in enumerate(centroid_features):      # val_feature è il valore di una feature del reference set i_temp-esimo (val)
+        for j_temp, val_feature in enumerate(centroid_features):
                 centroid_distance += (val_feature-x_test[j_temp])**2
         centroid_distance = np.sqrt(centroid_distance)
 
@@ -298,7 +289,6 @@ def calculate_results_row(gt_value, predicted, fc_output):
         'predicted': predicted
     }
     
-    # Aggiungi i valori dei nodi del layer fully connected
     fc_output_values = fc_output.squeeze().tolist()
     for i, value in enumerate(fc_output_values):
         row[f'node_{i}'] = value
@@ -309,18 +299,15 @@ def process_batch(model, feature, gt_value):
     feature = feature.unsqueeze(0)
     feature_flat = feature.view(feature.size(0), -1)
     
-    # Ottieni l'output del fully connected
     fc_output = get_fc_output(model, feature_flat)
     if fc_output is not None:
-        # Ottieni l'output finale del modello
         final_output = model(feature_flat)
         predicted = th.argmax(final_output, dim=1).item()
         
-        # Calcola la riga dei risultati
         return calculate_results_row(gt_value, predicted, fc_output)
     return None
 
-def get_split_dataframe(model, dataloader, target_split='test'):
+def get_split_dataframe(model, dataloader, target_split):
     model.eval()
     results = []
     
