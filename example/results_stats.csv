@@ -1,0 +1,5 @@
+metric,No post-hoc method
+accuracy,0.9524
+precision,0.9549
+recall,0.9524
+f1_score,0.9520
