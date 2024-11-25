@@ -32,7 +32,7 @@ To get started, clone the repository to your local machine:
     cd U-ProBE
 ```
 
-### Evirontment Setup
+### Environment Setup
 
 Create a Python environment using `environment.yml`:
 
