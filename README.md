@@ -34,6 +34,8 @@ To get started, clone the repository to your local machine:
 
 ### Environment Setup
 
+Python 3.11.11
+
 Create a Python environment using `environment.yml`:
 
 ```bash
